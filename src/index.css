@@ -1,0 +1,41 @@
+:root {
+  --green: #0b8a4a;
+  --green-dark: #076b39;
+  --ink: #14211b;
+  --muted: #6b7b73;
+  --line: #e4eae6;
+  --bg: #f6f8f7;
+  --card: #ffffff;
+  --shadow: 0 2px 14px rgba(20, 33, 27, 0.08);
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { margin: 0; height: 100%; }
+body {
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+#root { display: flex; flex-direction: column; min-height: 100%; }
+
+a { color: var(--green); text-decoration: none; }
+button { cursor: pointer; font: inherit; }
+
+.btn-primary {
+  border: 0;
+  background: var(--green-dark);
+  color: #fff;
+  font-weight: 600;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.btn-primary:active { transform: scale(0.99); }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}

@@ -1,0 +1,31 @@
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(10px, env(safe-area-inset-top)) 16px 10px;
+  background: var(--green);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.app-bar__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+}
+
+.app-bar__version {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.app-main {
+  flex: 1;
+  padding: 16px;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
