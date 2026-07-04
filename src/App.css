@@ -29,3 +29,126 @@
   width: 100%;
   margin: 0 auto;
 }
+
+/* Typography & shared bits */
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 24px 0 8px;
+}
+.muted { color: var(--muted); }
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.back-link {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Buttons */
+.btn-primary--sm {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.btn-danger {
+  border: 0;
+  background: #b3261e;
+  color: #fff;
+  font-weight: 600;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+a.btn-primary { display: inline-block; text-decoration: none; }
+
+/* Home list */
+.empty { display: grid; gap: 16px; }
+.recipe-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 12px;
+}
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.recipe-card:active { transform: scale(0.995); }
+.recipe-card__title { font-weight: 600; font-size: 17px; }
+.recipe-card__meta { font-size: 14px; color: var(--muted); }
+
+/* Detail */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.chip {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.ingredient-list { padding-left: 20px; margin: 0; display: grid; gap: 6px; }
+.step-list { padding-left: 20px; margin: 0; display: grid; gap: 10px; }
+.step-list li { padding-left: 4px; }
+
+/* Form */
+.recipe-form { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; }
+.field__label { font-size: 14px; font-weight: 600; }
+.field__hint { font-weight: 400; color: var(--muted); }
+.field__input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+}
+.field__input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(11, 138, 74, 0.12);
+}
+.field__input--area { resize: vertical; line-height: 1.5; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-error {
+  color: #b3261e;
+  font-size: 14px;
+  margin: 0;
+}
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.form-actions .btn-primary,
+.form-actions .btn-ghost,
+.form-actions .btn-danger { flex: 1; text-align: center; }

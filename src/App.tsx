@@ -1,5 +1,8 @@
 import { HashRouter, Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home'
+import AddRecipe from './pages/AddRecipe'
+import EditRecipe from './pages/EditRecipe'
+import RecipeDetail from './pages/RecipeDetail'
 import './App.css'
 
 function App() {
@@ -12,6 +15,9 @@ function App() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/add" element={<AddRecipe />} />
+          <Route path="/recipe/:id" element={<RecipeDetail />} />
+          <Route path="/recipe/:id/edit" element={<EditRecipe />} />
         </Routes>
       </main>
     </HashRouter>
