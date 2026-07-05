@@ -24,6 +24,10 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run build
+        env:
+          # Optional: set repo variable VITE_AI_CLEANUP_URL to enable AI cleanup
+          # on URL imports (see worker/README.md). Harmless when unset.
+          VITE_AI_CLEANUP_URL: ${{ vars.VITE_AI_CLEANUP_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

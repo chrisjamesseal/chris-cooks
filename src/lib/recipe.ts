@@ -103,6 +103,39 @@ export function scaleIngredientText(ing: Ingredient, factor: number): string {
   return ing.note ? `${line} (${ing.note})` : line
 }
 
+// Prep/measurement/descriptor words that shouldn't be used to match an
+// ingredient to a step — we want the food nouns.
+const STEP_STOPWORDS = new Set([
+  'a', 'an', 'the', 'of', 'to', 'and', 'or', 'for', 'plus', 'extra', 'with', 'into', 'from',
+  'your', 'fresh', 'dried', 'chopped', 'finely', 'roughly', 'sliced', 'diced', 'grated',
+  'crushed', 'peeled', 'large', 'small', 'medium', 'ripe', 'ground', 'boneless', 'skinless',
+  'free', 'fat', 'natural', 'piece', 'pieces', 'handful', 'wedges', 'serve', 'taste', 'optional',
+  'cooking', 'spray', 'low', 'calorie', 'tbsp', 'tsp', 'cup', 'cups', 'good', 'quality', 'about',
+])
+
+function keywordsFor(ing: Ingredient): string[] {
+  return ing.raw
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => w.length >= 3 && !STEP_STOPWORDS.has(w))
+}
+
+/**
+ * Which ingredients does this step use? Honours stored `ingredientRefs` when an
+ * importer set them; otherwise matches each ingredient's food words against the
+ * step text. Best-effort — used to surface amounts while cooking.
+ */
+export function ingredientsForStep(step: Step, ingredients: Ingredient[]): Ingredient[] {
+  if (step.ingredientRefs && step.ingredientRefs.length) {
+    const refs = new Set(step.ingredientRefs)
+    return ingredients.filter((i) => refs.has(i.id))
+  }
+  const text = step.text.toLowerCase()
+  return ingredients.filter((ing) =>
+    keywordsFor(ing).some((w) => new RegExp(`\\b${w}\\b`).test(text)),
+  )
+}
+
 /**
  * Break a step into readable paragraphs. Explicit line breaks win; otherwise a
  * long block is split on sentence boundaries into chunks of a couple sentences
