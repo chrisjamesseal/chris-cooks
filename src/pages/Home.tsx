@@ -93,9 +93,22 @@ export default function Home() {
               {filtered.map((recipe) => (
                 <li key={recipe.id}>
                   <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
-                    <span className="recipe-card__title">{recipe.title}</span>
-                    <span className="recipe-card__meta">
-                      {recipe.mainCategory} · {recipe.servings} servings
+                    {recipe.image && (
+                      <img
+                        className="recipe-card__thumb"
+                        src={recipe.image}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    )}
+                    <span className="recipe-card__body">
+                      <span className="recipe-card__title">{recipe.title}</span>
+                      <span className="recipe-card__meta">
+                        {recipe.mainCategory} · {recipe.servings} servings
+                      </span>
                     </span>
                   </Link>
                 </li>

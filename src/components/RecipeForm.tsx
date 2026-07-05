@@ -12,6 +12,7 @@ export type RecipeDraft = {
   prep: string
   cook: string
   sourceUrl: string
+  image: string
   ingredients: string
   steps: string
 }
@@ -25,6 +26,7 @@ function draftFromRecipe(recipe?: Recipe): RecipeDraft {
     prep: recipe?.times.prep ?? '',
     cook: recipe?.times.cook ?? '',
     sourceUrl: recipe?.source?.url ?? '',
+    image: recipe?.image ?? '',
     ingredients: recipe?.ingredients.map((i) => i.raw).join('\n') ?? '',
     steps: recipe?.steps.map((s) => s.text).join('\n') ?? '',
   }
@@ -72,6 +74,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       id: initial?.id ?? crypto.randomUUID(),
       schemaVersion: 1,
       title,
+      image: draft.image.trim() || undefined,
       mainCategory: draft.mainCategory,
       cuisine: draft.cuisine.trim() || undefined,
       servings: Math.max(1, Number(draft.servings) || 1),
@@ -163,6 +166,27 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
           onChange={(e) => set('cuisine', e.target.value)}
           placeholder="Italian"
         />
+      </label>
+
+      <label className="field">
+        <span className="field__label">Photo URL <span className="field__hint">optional</span></span>
+        <input
+          className="field__input"
+          type="url"
+          value={draft.image}
+          onChange={(e) => set('image', e.target.value)}
+          placeholder="https://…"
+        />
+        {draft.image.trim() && (
+          <img
+            className="image-preview"
+            src={draft.image.trim()}
+            alt=""
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        )}
       </label>
 
       <label className="field">

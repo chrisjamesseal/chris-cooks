@@ -38,6 +38,16 @@ export default function RecipeDetail() {
   return (
     <article className="recipe-detail">
       <Link to="/" className="back-link">← All recipes</Link>
+      {recipe.image && (
+        <img
+          className="recipe-hero"
+          src={recipe.image}
+          alt={recipe.title}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      )}
       <h1 className="page-title">{recipe.title}</h1>
 
       <div className="chips">
