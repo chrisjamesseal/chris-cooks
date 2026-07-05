@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAllRecipes } from '../db'
+import { ensureSeeded, getAllRecipes } from '../db'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
@@ -11,10 +11,12 @@ export default function Home() {
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
 
   useEffect(() => {
-    getAllRecipes().then((list) => {
-      list.sort((a, b) => b.updatedAt - a.updatedAt)
-      setRecipes(list)
-    })
+    ensureSeeded()
+      .then(getAllRecipes)
+      .then((list) => {
+        list.sort((a, b) => b.updatedAt - a.updatedAt)
+        setRecipes(list)
+      })
   }, [])
 
   const filtered = useMemo(() => {

@@ -59,7 +59,7 @@ export function parseRecipeFromHtml(html: string, sourceUrl: string): Recipe | n
 function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
   const now = Date.now()
   const title = cleanText(firstString(node.name)) || 'Imported recipe'
-  const ingredients = asStringArray(node.recipeIngredient)
+  const ingredients = ingredientLines(node.recipeIngredient)
     .map((line) => cleanText(line))
     .filter(Boolean)
     .map(parseIngredient)
@@ -192,6 +192,22 @@ function asStringArray(value: Json): string[] {
   return []
 }
 
+/**
+ * Ingredients as individual lines. Some sites put the whole list in one string
+ * (or a single array entry with embedded line breaks) rather than one entry per
+ * ingredient — split those so each ingredient becomes its own line.
+ */
+function ingredientLines(value: Json): string[] {
+  const out: string[] = []
+  for (const entry of asStringArray(value)) {
+    for (const piece of entry.split(/\r?\n|•|\|/)) {
+      const t = piece.trim()
+      if (t) out.push(t)
+    }
+  }
+  return out
+}
+
 function firstImage(value: Json): string | undefined {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) {
@@ -257,6 +273,47 @@ async function fetchText(url: string, timeoutMs = 15000): Promise<string> {
 
 export class ImportError extends Error {}
 
+/**
+ * Optional AI cleanup: when VITE_AI_CLEANUP_URL is configured (a serverless
+ * proxy holding the API key), scraped text is sent through it to fix odd
+ * formatting/typos. No-op — and never fails the import — when unset.
+ */
+async function aiCleanup(recipe: Recipe): Promise<Recipe> {
+  const endpoint = import.meta.env.VITE_AI_CLEANUP_URL
+  if (!endpoint) return recipe
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: recipe.title,
+        ingredients: recipe.ingredients.map((i) => i.raw),
+        steps: recipe.steps.map((s) => s.text),
+      }),
+    })
+    if (!res.ok) return recipe
+    const data = (await res.json()) as {
+      title?: string
+      ingredients?: string[]
+      steps?: string[]
+    }
+    return {
+      ...recipe,
+      title: data.title?.trim() || recipe.title,
+      ingredients:
+        Array.isArray(data.ingredients) && data.ingredients.length
+          ? data.ingredients.map((line) => parseIngredient(cleanText(String(line)))).filter((i) => i.raw)
+          : recipe.ingredients,
+      steps:
+        Array.isArray(data.steps) && data.steps.length
+          ? data.steps.map((text) => ({ id: newId(), text: cleanText(String(text)) })).filter((s) => s.text)
+          : recipe.steps,
+    }
+  } catch {
+    return recipe // cleanup is best-effort
+  }
+}
+
 export async function importRecipeFromUrl(url: string): Promise<Recipe> {
   const target = normalizeUrl(url)
   const attempts = [target, ...PROXIES.map((p) => p(target))]
@@ -272,7 +329,7 @@ export async function importRecipeFromUrl(url: string): Promise<Recipe> {
     reachedPage = true
     const recipe = parseRecipeFromHtml(html, target)
     if (recipe && (recipe.ingredients.length > 0 || recipe.steps.length > 0)) {
-      return recipe
+      return aiCleanup(recipe)
     }
   }
 

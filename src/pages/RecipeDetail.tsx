@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe } from '../db'
-import { scaleIngredientText, stepParagraphs } from '../lib/recipe'
+import { ingredientsForStep, scaleIngredientText, stepParagraphs } from '../lib/recipe'
 import type { Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -21,6 +21,16 @@ export default function RecipeDetail() {
   const navigate = useNavigate()
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined)
   const [people, setPeople] = useState(1)
+  const [doneSteps, setDoneSteps] = useState<Set<string>>(new Set())
+
+  function toggleStep(stepId: string) {
+    setDoneSteps((prev) => {
+      const next = new Set(prev)
+      if (next.has(stepId)) next.delete(stepId)
+      else next.add(stepId)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!id) return
@@ -123,18 +133,52 @@ export default function RecipeDetail() {
         </ul>
       </section>
 
-      <section>
-        <h2 className="section-title">Method</h2>
-        <ol className="step-list">
-          {recipe.steps.map((step) => (
-            <li key={step.id}>
-              {stepParagraphs(step.text).map((para, i) => (
-                <p key={i}>{para}</p>
-              ))}
-            </li>
-          ))}
-        </ol>
-      </section>
+      {recipe.steps.length > 0 && (
+        <section>
+          <h2 className="section-title">Method</h2>
+          <p className="scale-note">Tap a step to cross it off as you cook.</p>
+          <ol className="step-list">
+            {recipe.steps.map((step, index) => {
+              const used = ingredientsForStep(step, recipe.ingredients).filter(
+                (i) => i.quantity !== undefined,
+              )
+              const done = doneSteps.has(step.id)
+              return (
+                <li
+                  key={step.id}
+                  className={`step-card${done ? ' step-card--done' : ''}`}
+                  onClick={() => toggleStep(step.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={done}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggleStep(step.id)
+                    }
+                  }}
+                >
+                  <span className="step-card__num">{index + 1}</span>
+                  <div className="step-card__body">
+                    {stepParagraphs(step.text).map((para, i) => (
+                      <p key={i}>{para}</p>
+                    ))}
+                    {used.length > 0 && (
+                      <div className="step-ingredients">
+                        {used.map((ing) => (
+                          <span className="step-ingredient" key={ing.id}>
+                            {scaleIngredientText(ing, factor)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+      )}
 
       {nutritionRows.length > 0 && (
         <section>
