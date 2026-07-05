@@ -84,6 +84,27 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 
 /* Home list */
 .empty { display: grid; gap: 16px; }
+.search-input { margin-bottom: 12px; }
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.filter-chip {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.filter-chip--active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
 .recipe-list {
   list-style: none;
   padding: 0;
