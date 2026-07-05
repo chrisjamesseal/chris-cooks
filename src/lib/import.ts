@@ -1,4 +1,4 @@
-import type { MainCategory, Recipe, Step } from '../types'
+import type { MainCategory, Nutrition, Recipe, Step } from '../types'
 import { newId, parseIngredient } from './recipe'
 
 /**
@@ -81,9 +81,35 @@ function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
     },
     ingredients,
     steps,
+    nutrition: mapNutrition(node.nutrition),
     createdAt: now,
     updatedAt: now,
   }
+}
+
+function mapNutrition(node: Json): Nutrition | undefined {
+  if (!node || typeof node !== 'object') return undefined
+  const nutrition: Nutrition = {}
+  const num = (v: Json): number | undefined => {
+    const s = firstString(v)
+    if (typeof v === 'number') return Number.isFinite(v) ? v : undefined
+    if (!s) return undefined
+    const m = s.replace(',', '.').match(/[\d.]+/)
+    return m ? Number(m[0]) : undefined
+  }
+  nutrition.calories = num(node.calories)
+  nutrition.fatG = num(node.fatContent)
+  nutrition.satFatG = num(node.saturatedFatContent)
+  nutrition.cholesterolMg = num(node.cholesterolContent)
+  nutrition.sodiumMg = num(node.sodiumContent)
+  nutrition.carbsG = num(node.carbohydrateContent)
+  nutrition.fiberG = num(node.fiberContent)
+  nutrition.sugarG = num(node.sugarContent)
+  nutrition.proteinG = num(node.proteinContent)
+  const size = num(node.servingSize)
+  if (size !== undefined) nutrition.servingSizeG = size
+  const hasAny = Object.values(nutrition).some((v) => v !== undefined)
+  return hasAny ? nutrition : undefined
 }
 
 function parseInstructions(value: Json): Step[] {
