@@ -1,8 +1,23 @@
 import { useState, type FormEvent } from 'react'
-import type { MainCategory, Recipe } from '../types'
+import type { MainCategory, Nutrition, Recipe } from '../types'
 import { ingredientsFromText, parseSteps } from '../lib/recipe'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
+
+const NUTRITION_FIELDS: { key: keyof Nutrition; label: string }[] = [
+  { key: 'calories', label: 'Calories' },
+  { key: 'servingSizeG', label: 'Serving (g)' },
+  { key: 'fatG', label: 'Fat (g)' },
+  { key: 'satFatG', label: 'Sat fat (g)' },
+  { key: 'carbsG', label: 'Carbs (g)' },
+  { key: 'sugarG', label: 'Sugar (g)' },
+  { key: 'fiberG', label: 'Fibre (g)' },
+  { key: 'proteinG', label: 'Protein (g)' },
+  { key: 'sodiumMg', label: 'Sodium (mg)' },
+  { key: 'cholesterolMg', label: 'Cholesterol (mg)' },
+]
+
+type NutritionDraft = Partial<Record<keyof Nutrition, string>>
 
 export type RecipeDraft = {
   title: string
@@ -15,6 +30,17 @@ export type RecipeDraft = {
   image: string
   ingredients: string
   steps: string
+  nutrition: NutritionDraft
+}
+
+function nutritionDraft(nutrition?: Nutrition): NutritionDraft {
+  const draft: NutritionDraft = {}
+  if (!nutrition) return draft
+  for (const { key } of NUTRITION_FIELDS) {
+    const value = nutrition[key]
+    if (value !== undefined) draft[key] = String(value)
+  }
+  return draft
 }
 
 function draftFromRecipe(recipe?: Recipe): RecipeDraft {
@@ -29,7 +55,19 @@ function draftFromRecipe(recipe?: Recipe): RecipeDraft {
     image: recipe?.image ?? '',
     ingredients: recipe?.ingredients.map((i) => i.raw).join('\n') ?? '',
     steps: recipe?.steps.map((s) => s.text).join('\n') ?? '',
+    nutrition: nutritionDraft(recipe?.nutrition),
   }
+}
+
+function buildNutrition(draft: NutritionDraft): Nutrition | undefined {
+  const nutrition: Nutrition = {}
+  for (const { key } of NUTRITION_FIELDS) {
+    const raw = (draft[key] ?? '').trim()
+    if (!raw) continue
+    const n = Number(raw)
+    if (Number.isFinite(n)) nutrition[key] = n
+  }
+  return Object.keys(nutrition).length ? nutrition : undefined
 }
 
 type Props = {
@@ -46,6 +84,10 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
 
   function set<K extends keyof RecipeDraft>(key: K, value: RecipeDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
+  }
+
+  function setNutrition(key: keyof Nutrition, value: string) {
+    setDraft((d) => ({ ...d, nutrition: { ...d.nutrition, [key]: value } }))
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -85,6 +127,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       source: sourceUrl ? { type: 'url', url: sourceUrl } : { type: 'manual' },
       ingredients,
       steps,
+      nutrition: buildNutrition(draft.nutrition),
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     }
@@ -214,6 +257,25 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
           placeholder={'Boil the pasta\nFry the garlic\nCombine and serve'}
         />
       </label>
+
+      <details className="nutrition-fieldset">
+        <summary className="field__label">Nutrition <span className="field__hint">per serving, optional</span></summary>
+        <div className="nutrition-grid">
+          {NUTRITION_FIELDS.map(({ key, label }) => (
+            <label className="field" key={key}>
+              <span className="field__label field__label--sm">{label}</span>
+              <input
+                className="field__input"
+                type="number"
+                min={0}
+                inputMode="decimal"
+                value={draft.nutrition[key] ?? ''}
+                onChange={(e) => setNutrition(key, e.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+      </details>
 
       <label className="field">
         <span className="field__label">Source URL <span className="field__hint">optional</span></span>
