@@ -137,7 +137,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 }
 .recipe-card__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .recipe-card__title { font-weight: 600; font-size: 17px; }
-.recipe-card__meta { font-size: 14px; color: var(--muted); }
+.recipe-card__meta { font-size: 14px; color: var(--muted); text-transform: capitalize; }
 
 /* Import */
 .import-bar { display: grid; gap: 8px; margin-bottom: 20px; }
@@ -168,10 +168,22 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 }
 .recipe-hero--ph {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 140px;
+  gap: 10px;
+  font-size: 120px;
   line-height: 1;
+  text-decoration: none;
+  position: relative;
+}
+.recipe-hero__add {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green-dark);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 5px 12px;
+  border-radius: 999px;
 }
 .image-preview {
   width: 140px;
@@ -193,7 +205,61 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   padding: 4px 10px;
   border-radius: 999px;
 }
+.chip--cuisine { text-transform: capitalize; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  z-index: 50;
+}
 .ingredient-list { padding-left: 20px; margin: 0; display: grid; gap: 7px; }
+
+/* Checkable ingredient list (shopping) */
+.ingredient-list--check { list-style: none; padding: 0; display: grid; gap: 2px; }
+.ingredient-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 8px 6px;
+  border-radius: 8px;
+  font: inherit;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.ingredient-item:active { background: var(--bg); }
+.ingredient-item__check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  align-self: center;
+}
+.ingredient-item--have .ingredient-item__check { background: var(--green); border-color: var(--green); }
+.ingredient-item--have .ingredient-item__text { color: var(--muted); text-decoration: line-through; }
+.shopping-actions { margin-top: 12px; }
+.shopping-actions .btn-primary { width: 100%; }
+.shopping-actions .btn-primary:disabled { opacity: 0.5; }
 
 /* Method — spaced, tappable step cards */
 .step-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }

@@ -56,9 +56,20 @@ export function parseRecipeFromHtml(html: string, sourceUrl: string): Recipe | n
   return mapNodeToRecipe(node, sourceUrl)
 }
 
+/** Trim a scraped title to just the dish name (drop brackets, SEO tails, "Recipe"). */
+export function tidyTitle(raw: string): string {
+  let t = raw
+  t = t.replace(/\s*[([][^)\]]*[)\]]/g, ' ')
+  t = t.split('|')[0]
+  t = t.replace(/\s+[-–—]\s+.{1,30}$/, '')
+  t = t.replace(/\brecipes?\b/gi, ' ')
+  t = t.replace(/\s{2,}/g, ' ').replace(/[\s,\-–—:]+$/, '').trim()
+  return t || raw.trim()
+}
+
 function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
   const now = Date.now()
-  const title = cleanText(firstString(node.name)) || 'Imported recipe'
+  const title = tidyTitle(cleanText(firstString(node.name)) || 'Imported recipe')
   const ingredients = ingredientLines(node.recipeIngredient)
     .map((line) => cleanText(line))
     .filter(Boolean)

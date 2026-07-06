@@ -96,30 +96,16 @@ export default function Home() {
               {filtered.map((recipe) => (
                 <li key={recipe.id}>
                   <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
-                    {recipe.image ? (
-                      <img
-                        className="recipe-card__thumb"
-                        src={recipe.image}
-                        alt=""
-                        loading="lazy"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="recipe-card__thumb recipe-card__thumb--ph"
-                        style={{ background: placeholderGradient(recipe.mainCategory) }}
-                        aria-hidden="true"
-                      >
-                        {placeholderEmoji(recipe.title, recipe.mainCategory)}
-                      </span>
-                    )}
+                    <span
+                      className="recipe-card__thumb recipe-card__thumb--ph"
+                      style={{ background: placeholderGradient(recipe.mainCategory) }}
+                      aria-hidden="true"
+                    >
+                      {placeholderEmoji(recipe.title, recipe.mainCategory)}
+                    </span>
                     <span className="recipe-card__body">
                       <span className="recipe-card__title">{recipe.title}</span>
-                      <span className="recipe-card__meta">
-                        {recipe.mainCategory} · {recipe.servings} servings
-                      </span>
+                      <span className="recipe-card__meta">{recipe.cuisine || recipe.mainCategory}</span>
                     </span>
                   </Link>
                 </li>
