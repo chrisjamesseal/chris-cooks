@@ -4,6 +4,15 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '0.8.0',
+    title: 'Make it healthier',
+    notes: [
+      'Every recipe has a "Make it healthier" panel — pick what to cut back (calories, saturated fat, sugar or sodium) and get a lighter version.',
+      'It keeps the dish recognisable and flags any change that affects taste or texture, so you decide before anything updates.',
+      'Needs a one-time AI helper: deploy the small worker in /worker (it holds your API key) and set VITE_AI_CLEANUP_URL — see worker/README.md. Until then the panel says it isn’t connected.',
+    ],
+  },
+  {
     version: '0.7.0',
     title: 'Shopping, tidier data & the edit form',
     notes: [

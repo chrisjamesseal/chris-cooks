@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { deleteRecipe, getRecipe } from '../db'
-import { deQuantifyStep, ingredientsForStep, scaleIngredientText, stepParagraphs } from '../lib/recipe'
+import { deleteRecipe, getRecipe, saveRecipe } from '../db'
+import {
+  deQuantifyStep,
+  ingredientsForStep,
+  ingredientsFromText,
+  newId,
+  scaleIngredientText,
+  stepParagraphs,
+} from '../lib/recipe'
+import {
+  aiEndpoint,
+  HEALTH_PRIORITIES,
+  makeHealthier,
+  type HealthierResult,
+  type HealthPriority,
+} from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
@@ -27,6 +41,13 @@ export default function RecipeDetail() {
   const [completedThrough, setCompletedThrough] = useState(-1)
   const [have, setHave] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<string | null>(null)
+  // "Make it healthier"
+  const [healthOpen, setHealthOpen] = useState(false)
+  const [priority, setPriority] = useState<HealthPriority>('calories')
+  const [healthLoading, setHealthLoading] = useState(false)
+  const [healthResult, setHealthResult] = useState<HealthierResult | null>(null)
+  const [healthError, setHealthError] = useState<string | null>(null)
+  const aiOn = !!aiEndpoint()
 
   useEffect(() => {
     if (!id) return
@@ -87,6 +108,37 @@ export default function RecipeDetail() {
     setTimeout(() => setToast(null), 2200)
   }
 
+  async function generateHealthier() {
+    setHealthLoading(true)
+    setHealthError(null)
+    setHealthResult(null)
+    try {
+      setHealthResult(await makeHealthier(loaded, priority))
+    } catch (err) {
+      setHealthError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setHealthLoading(false)
+    }
+  }
+
+  async function applyHealthier() {
+    if (!healthResult) return
+    const updated: Recipe = {
+      ...loaded,
+      ingredients: ingredientsFromText(healthResult.ingredients.join('\n')),
+      steps: healthResult.steps.map((text) => ({ id: newId(), text })),
+      updatedAt: Date.now(),
+    }
+    await saveRecipe(updated)
+    setRecipe(updated)
+    setPeople(updated.servings)
+    setCompletedThrough(-1)
+    setHave(new Set())
+    setHealthResult(null)
+    setHealthOpen(false)
+    flash('Updated to a healthier version')
+  }
+
   const baseServings = recipe.servings || 1
   const factor = people / baseServings
   const scaled = people !== baseServings
@@ -143,6 +195,79 @@ export default function RecipeDetail() {
         {times.map((t) => (
           <span className="chip" key={t as string}>{t}</span>
         ))}
+      </div>
+
+      <div className="healthier card">
+        <button
+          type="button"
+          className="healthier__head"
+          onClick={() => setHealthOpen((o) => !o)}
+          aria-expanded={healthOpen}
+        >
+          <span>🥗 Make it healthier</span>
+          <span className="healthier__chevron" aria-hidden="true">{healthOpen ? '▲' : '▼'}</span>
+        </button>
+        {healthOpen && (
+          <div className="healthier__body">
+            {!aiOn ? (
+              <p className="muted">
+                This uses an AI helper that needs a one-time setup.{' '}
+                <Link to="/changelog">See how</Link>.
+              </p>
+            ) : healthResult ? (
+              <>
+                <p className="muted">
+                  A lighter version with less {HEALTH_PRIORITIES.find((p) => p.key === priority)?.label.toLowerCase()}.
+                  {healthResult.changes.length === 0 && ' No big taste or texture changes.'}
+                </p>
+                {healthResult.changes.length > 0 && (
+                  <div className="healthier__flags">
+                    <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
+                    <ul>
+                      {healthResult.changes.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="form-actions">
+                  <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
+                    Keep original
+                  </button>
+                  <button type="button" className="btn-primary" onClick={applyHealthier}>
+                    Apply changes
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="muted">Reduce…</p>
+                <div className="filter-chips">
+                  {HEALTH_PRIORITIES.map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      className={`filter-chip${priority === p.key ? ' filter-chip--active' : ''}`}
+                      onClick={() => setPriority(p.key)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary healthier__go"
+                  onClick={generateHealthier}
+                  disabled={healthLoading}
+                >
+                  {healthLoading ? 'Thinking…' : 'Suggest a healthier version'}
+                </button>
+                {healthError && <p className="form-error" role="alert">{healthError}</p>}
+                <p className="healthier__hint">Keeps the dish recognisable; you review before anything changes.</p>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <section>
