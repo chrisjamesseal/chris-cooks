@@ -58,8 +58,17 @@ function parseQuantity(text) {
   const n = Number(text)
   return Number.isFinite(n) ? n : undefined
 }
+function cleanIngredientLine(line) {
+  return cleanText(line)
+    .replace(/\s*[([][^)\]]*[)\]]/g, '')
+    .replace(/[()[\]]/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[\s,;]+$/, '')
+    .trim()
+}
 function parseIngredient(line, id) {
-  const raw = cleanText(line)
+  const raw = cleanIngredientLine(line)
   const base = { id, raw, item: raw }
   const m = QTY_UNIT.exec(raw)
   if (!m) return base

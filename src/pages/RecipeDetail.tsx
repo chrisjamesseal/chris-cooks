@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe } from '../db'
-import { ingredientsForStep, scaleIngredientText, stepParagraphs } from '../lib/recipe'
+import { deQuantifyStep, ingredientsForStep, scaleIngredientText, stepParagraphs } from '../lib/recipe'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
@@ -67,21 +67,19 @@ export default function RecipeDetail() {
     navigate('/', { replace: true })
   }
 
-  function shareShoppingList() {
+  // Name of the one-time Apple Shortcut that adds each line as its own reminder.
+  const SHORTCUT_NAME = 'Add to Shopping List'
+
+  function sendToReminders() {
     const remaining = loaded.ingredients.filter((i) => !have.has(i.id)).map((i) => scaleIngredientText(i, factor))
     if (remaining.length === 0) return
     const text = remaining.join('\n')
-    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> }
-    if (typeof nav.share === 'function') {
-      nav.share({ title: `${loaded.title} — shopping list`, text }).catch(() => {})
-    } else if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => flash('Copied — paste into Reminders'))
-        .catch(() => flash('Could not copy the list'))
-    } else {
-      flash('Sharing not supported on this device')
-    }
+    // Copy first as a universal fallback (Reminders splits a multi-line paste
+    // into separate items), then hand off to the Shortcut for one-tap add.
+    navigator.clipboard?.writeText(text).catch(() => {})
+    const url = `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(text)}`
+    window.location.href = url
+    flash('Opening Reminders… (list also copied)')
   }
 
   function flash(msg: string) {
@@ -148,39 +146,8 @@ export default function RecipeDetail() {
       </div>
 
       <section>
-        <div className="ingredients-head">
-          <h2 className="section-title">Ingredients</h2>
-          <div className="stepper" role="group" aria-label="Number of servings">
-            <button
-              type="button"
-              className="stepper__btn"
-              onClick={() => setPeople((p) => Math.max(1, p - 1))}
-              aria-label="Fewer servings"
-            >
-              −
-            </button>
-            <span className="stepper__value">
-              {people} {people === 1 ? 'serving' : 'servings'}
-            </span>
-            <button
-              type="button"
-              className="stepper__btn"
-              onClick={() => setPeople((p) => p + 1)}
-              aria-label="More servings"
-            >
-              +
-            </button>
-          </div>
-        </div>
-        {scaled && (
-          <p className="scale-note">
-            Scaled from {baseServings}.{' '}
-            <button type="button" className="link-btn" onClick={() => setPeople(baseServings)}>
-              Reset
-            </button>
-          </p>
-        )}
-        <p className="scale-note">Tick anything you already have; add the rest to your shopping list.</p>
+        <h2 className="section-title">Ingredients</h2>
+        <p className="scale-note">Select any items you already have to create a shopping list.</p>
         <ul className="ingredient-list ingredient-list--check">
           {recipe.ingredients.map((ing) => {
             const has = have.has(ing.id)
@@ -201,11 +168,39 @@ export default function RecipeDetail() {
             )
           })}
         </ul>
+
+        <div className="servings-row" role="group" aria-label="Number of servings">
+          <button
+            type="button"
+            className="stepper__btn"
+            onClick={() => setPeople((p) => Math.max(1, p - 1))}
+            aria-label="Fewer servings"
+          >
+            −
+          </button>
+          <span className="servings-row__value">
+            {people} {people === 1 ? 'serving' : 'servings'}
+            {scaled && (
+              <button type="button" className="link-btn" onClick={() => setPeople(baseServings)}>
+                Reset
+              </button>
+            )}
+          </span>
+          <button
+            type="button"
+            className="stepper__btn"
+            onClick={() => setPeople((p) => p + 1)}
+            aria-label="More servings"
+          >
+            +
+          </button>
+        </div>
+
         <div className="shopping-actions">
           <button
             type="button"
             className="btn-primary"
-            onClick={shareShoppingList}
+            onClick={sendToReminders}
             disabled={remainingCount === 0}
           >
             {remainingCount === 0 ? 'Got everything ✓' : `Add ${remainingCount} to Reminders`}
@@ -216,7 +211,7 @@ export default function RecipeDetail() {
       {recipe.steps.length > 0 && (
         <section>
           <h2 className="section-title">Method</h2>
-          <p className="scale-note">Tap a step to tick it — everything up to it is marked too.</p>
+          <p className="scale-note">Click on a step to mark it as complete.</p>
           <ol className="step-list">
             {recipe.steps.map((step, index) => {
               const used = stepPills[index]
@@ -238,7 +233,7 @@ export default function RecipeDetail() {
                 >
                   <span className="step-card__num">{done ? '✓' : index + 1}</span>
                   <div className="step-card__body">
-                    {stepParagraphs(step.text).map((para, i) => (
+                    {stepParagraphs(deQuantifyStep(step.text)).map((para, i) => (
                       <p key={i}>{para}</p>
                     ))}
                     {used.length > 0 && (
