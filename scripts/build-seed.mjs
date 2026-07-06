@@ -126,10 +126,22 @@ const NUTRITION_MAP = {
   'Serving Size': 'servingSizeG',
 }
 
+// Trim a scraped/exported title down to just the dish name: drop parentheticals,
+// SEO tails after a pipe, trailing " - Brand/site" suffixes, and the word "Recipe".
+function tidyTitle(raw) {
+  let t = raw
+  t = t.replace(/\s*[([][^)\]]*[)\]]/g, ' ') // remove (...) and [...]
+  t = t.split('|')[0] // drop everything after a pipe (usually SEO/source)
+  t = t.replace(/\s+[-–—]\s+.{1,30}$/, '') // drop trailing " - Brand/site" (spaced dash only)
+  t = t.replace(/\brecipes?\b/gi, ' ') // remove the word Recipe/Recipes
+  t = t.replace(/\s{2,}/g, ' ').replace(/[\s,\-–—:]+$/, '').trim()
+  return t || raw.trim()
+}
+
 // --- markdown parsing ------------------------------------------------------
 function parseRecipe(md) {
   const lines = md.split(/\r?\n/)
-  const title = cleanText((lines.find((l) => l.startsWith('# ')) || '').replace(/^#\s*/, ''))
+  const title = tidyTitle(cleanText((lines.find((l) => l.startsWith('# ')) || '').replace(/^#\s*/, '')))
   if (!title) return null
 
   const field = (name) => {
