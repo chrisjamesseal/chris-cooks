@@ -15,6 +15,40 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
 const SYSTEM = `You clean up recipe text that was scraped from a web page. Fix obvious OCR/formatting errors, spelling mistakes, stray HTML entities, and odd spacing. Split any ingredient line that actually contains multiple ingredients into separate lines. Do NOT invent, add, remove, or reword the actual cooking content — only correct how it is written. Preserve quantities and units exactly. Return the same recipe, cleaned.`
 
+const PRIORITY_LABEL = {
+  calories: 'calories',
+  satfat: 'saturated fat',
+  sugar: 'sugar',
+  sodium: 'sodium',
+}
+
+function healthierSystem(priority) {
+  const target = PRIORITY_LABEL[priority] || 'calories'
+  return `You are a recipe developer. Create a healthier version of the given recipe that reduces ${target} while keeping the dish recognisable and tasty. Make sensible ingredient swaps and method tweaks (e.g. leaner cuts, less oil/sugar/salt, lower-fat dairy, more vegetables) but keep it the same dish — do not turn it into something else. Keep the servings the same. Return the full updated ingredient list (one item per line, with quantities) and the full updated method steps. In "changes", list ONLY the swaps that meaningfully alter taste or texture, each as a short plain-English note the cook can weigh up (e.g. "Greek yogurt instead of cream — slightly tangier, less rich"). If nothing meaningfully changes taste or texture, return an empty changes list.`
+}
+
+const HEALTHIER_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ingredients', 'steps', 'changes'],
+  properties: {
+    ingredients: { type: 'array', items: { type: 'string' } },
+    steps: { type: 'array', items: { type: 'string' } },
+    changes: { type: 'array', items: { type: 'string' } },
+  },
+}
+
+const CLEANUP_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'ingredients', 'steps'],
+  properties: {
+    title: { type: 'string' },
+    ingredients: { type: 'array', items: { type: 'string' } },
+    steps: { type: 'array', items: { type: 'string' } },
+  },
+}
+
 export default {
   async fetch(request, env) {
     const origin = env.ALLOWED_ORIGIN || '*'
@@ -39,30 +73,21 @@ export default {
       return json({ error: 'Invalid JSON' }, 400, cors)
     }
 
+    const healthier = body.mode === 'healthier'
     const payload = {
       model: MODEL,
       max_tokens: 4096,
-      system: SYSTEM,
+      system: healthier ? healthierSystem(body.priority) : SYSTEM,
       output_config: {
-        format: {
-          type: 'json_schema',
-          schema: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['title', 'ingredients', 'steps'],
-            properties: {
-              title: { type: 'string' },
-              ingredients: { type: 'array', items: { type: 'string' } },
-              steps: { type: 'array', items: { type: 'string' } },
-            },
-          },
-        },
+        format: { type: 'json_schema', schema: healthier ? HEALTHIER_SCHEMA : CLEANUP_SCHEMA },
       },
       messages: [
         {
           role: 'user',
           content: JSON.stringify({
             title: body.title ?? '',
+            servings: body.servings ?? null,
+            nutrition: body.nutrition ?? null,
             ingredients: Array.isArray(body.ingredients) ? body.ingredients : [],
             steps: Array.isArray(body.steps) ? body.steps : [],
           }),
