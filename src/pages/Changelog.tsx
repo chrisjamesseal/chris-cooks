@@ -4,6 +4,15 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '0.9.0',
+    title: 'Crisper food icons',
+    notes: [
+      'Recipe icons now render identically on every device — iPhone, Android, laptop — instead of changing with each system font.',
+      'Uses the Fluent Emoji (flat) set, bundled into the app so it works offline with no extra loading.',
+      'Same picture-from-the-title logic as before, just sharper and consistent everywhere.',
+    ],
+  },
+  {
     version: '0.8.0',
     title: 'Make it healthier',
     notes: [

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ensureSeeded, getAllRecipes } from '../db'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
+import { FoodIcon } from '../components/FoodIcon'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
@@ -146,7 +147,7 @@ export default function Home() {
                       style={{ background: placeholderGradient(recipe.mainCategory) }}
                       aria-hidden="true"
                     >
-                      {placeholderEmoji(recipe.title, recipe.mainCategory)}
+                      <FoodIcon emoji={placeholderEmoji(recipe.title, recipe.mainCategory)} />
                     </span>
                     <span className="recipe-card__body">
                       <span className="recipe-card__title">{recipe.title}</span>

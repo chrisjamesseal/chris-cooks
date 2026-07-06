@@ -17,6 +17,7 @@ import {
   type HealthPriority,
 } from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
+import { FoodIcon } from '../components/FoodIcon'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -183,7 +184,7 @@ export default function RecipeDetail() {
           style={{ background: placeholderGradient(recipe.mainCategory) }}
           aria-label="Add a photo"
         >
-          <span aria-hidden="true">{placeholderEmoji(recipe.title, recipe.mainCategory)}</span>
+          <FoodIcon emoji={placeholderEmoji(recipe.title, recipe.mainCategory)} />
           <span className="recipe-hero__add">＋ Add a photo</span>
         </Link>
       )}
