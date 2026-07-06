@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ensureSeeded, getAllRecipes } from '../db'
+import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
@@ -95,7 +96,7 @@ export default function Home() {
               {filtered.map((recipe) => (
                 <li key={recipe.id}>
                   <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
-                    {recipe.image && (
+                    {recipe.image ? (
                       <img
                         className="recipe-card__thumb"
                         src={recipe.image}
@@ -105,6 +106,14 @@ export default function Home() {
                           e.currentTarget.style.display = 'none'
                         }}
                       />
+                    ) : (
+                      <span
+                        className="recipe-card__thumb recipe-card__thumb--ph"
+                        style={{ background: placeholderGradient(recipe.mainCategory) }}
+                        aria-hidden="true"
+                      >
+                        {placeholderEmoji(recipe.title, recipe.mainCategory)}
+                      </span>
                     )}
                     <span className="recipe-card__body">
                       <span className="recipe-card__title">{recipe.title}</span>

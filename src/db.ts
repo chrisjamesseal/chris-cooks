@@ -35,16 +35,20 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '1'
+const SEED_VERSION = '2'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 
 type SeedPayload = { version: number; recipes: Recipe[] }
 
 /**
- * Load the bundled recipes into IndexedDB on first run (and again after a
- * storage reset, since the localStorage flag clears too — so the collection
- * always comes back). Never overwrites a recipe that already exists, so edits
- * and user-added recipes are preserved.
+ * Load the bundled recipes into IndexedDB on first run, after a storage reset
+ * (the localStorage flag clears too, so the collection always comes back), and
+ * whenever SEED_VERSION is bumped (to push corrections like fixed categories).
+ *
+ * All seed recipes use `seed-*` ids, so writing them only ever touches seed
+ * recipes — user-added recipes (random ids) are never affected. A version bump
+ * does refresh seed recipes to the bundled version; if you've edited or deleted
+ * a seed recipe, that change is re-applied from the bundle on the next bump.
  */
 export async function ensureSeeded(): Promise<void> {
   try {
@@ -53,10 +57,9 @@ export async function ensureSeeded(): Promise<void> {
     if (!res.ok) return
     const payload = (await res.json()) as SeedPayload
     const db = await getDB()
-    const existing = new Set(await db.getAllKeys('recipes'))
     const tx = db.transaction('recipes', 'readwrite')
     for (const recipe of payload.recipes) {
-      if (!existing.has(recipe.id)) tx.store.put(recipe)
+      tx.store.put(recipe)
     }
     await tx.done
     localStorage.setItem(SEED_FLAG, SEED_VERSION)

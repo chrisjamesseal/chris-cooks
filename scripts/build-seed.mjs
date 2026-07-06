@@ -69,36 +69,35 @@ function parseIngredient(line, id) {
   return { ...base, quantity, unit: unit || undefined, item: rest.trim() || raw }
 }
 
-// --- category mapping (mirror of src/lib/import.ts) ------------------------
-function mapCategory(raw) {
-  const c = (raw || '').toLowerCase()
-  if (/dessert|cake|pudding|sweet|bake|cookie|brownie|banoffee/.test(c)) return 'Dessert'
-  if (/breakfast|brunch|oats|overnight/.test(c)) return 'Breakfast'
-  if (/snack|canap|starter|appetiser|appetizer|side|sauce|condiment|dip|slaw/.test(c)) return 'Snack'
-  if (/lunch/.test(c)) return 'Lunch'
+// --- category mapping -----------------------------------------------------
+// Maps a recipe's freeform category (plus its title as a fallback) onto one of
+// the app's five buckets. Word-boundary matches avoid substring traps like
+// "panCAKEs" and "SWEET potato", and mains are checked before sides so a dish
+// tagged "main course, side dish, snack" lands on Dinner, not Snack.
+function mapCategory(raw, title) {
+  const hay = `${raw || ''} ${title || ''}`.toLowerCase()
+  const has = (re) => re.test(hay)
+
+  // Pure sauces / condiments / dips first — otherwise "Pizza sauce" reads as pizza.
+  if (has(/\b(sauce|condiment|dip|dressing|marinade|chutney|salsa|gravy)\b/)) return 'Snack'
+  if (has(/\b(breakfast|brunch|pancake|waffle|overnight oats?|porridge|granola|muesli|chia|frittata|shakshuka|omelette?)\b/))
+    return 'Breakfast'
+  if (has(/\b(dessert|cake|gateau|cheesecake|brownie|cookie|biscuit|pudding|banoffee|custard|tart|crumble)\b/))
+    return 'Dessert'
+  if (
+    has(
+      /\b(dinner|main course|main meal|mains|supper|entree|curry|tikka|masala|rogan|katsu|korma|pasta|spaghetti|rigatoni|lasagne|gnocchi|macaroni|carbonara|risotto|paella|noodles?|ramen|pad thai|stir.?fry|burger|tacos?|fajitas?|wrap|shawarma|kebab|pizza|casserole|roast|steak|ribs|wellington|gammon|pie|stew|chill?i|hotpot|one.?pot|one.?pan|fakeaway|schnitzel)\b/,
+    )
+  )
+    return 'Dinner'
+  if (has(/\b(lunch|soup|chowder|bisque|salad|slaw|sandwich)\b/)) return 'Lunch'
+  if (has(/\b(snacks?|sides?|side dish|appetisers?|appetizers?|starters?|canape|nibbles?|bites?|skewers?)\b/)) return 'Snack'
   return 'Dinner'
 }
 
 // --- misc helpers ----------------------------------------------------------
 function slugify(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-}
-function hash(s) {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-const STOPWORDS = new Set(['the', 'and', 'with', 'for', 'a', 'of', 'in', 'easy', 'best', 'homemade', 'quick', 'my'])
-function imageFor(title, id) {
-  const words = title
-    .replace(/\s*[-–|].*$/, '') // drop "- Instant Brands" style suffixes
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w && !STOPWORDS.has(w))
-    .slice(0, 3)
-  const keywords = (words.length ? words : ['food']).join(',')
-  return `https://loremflickr.com/600/600/${keywords}?lock=${hash(id) % 100000}`
 }
 function parseTotalTime(raw) {
   if (!raw) return undefined
@@ -184,11 +183,12 @@ function parseRecipe(md) {
     id,
     schemaVersion: 1,
     title,
-    image: imageFor(title, id),
+    // No image: the app renders a clean emoji/gradient placeholder for recipes
+    // without a photo. Swap in a real photo any time via Edit → Photo URL.
     source: source
       ? { type: 'url', url: /^https?:\/\//.test(source) ? source : `https://${source}` }
       : { type: 'manual' },
-    mainCategory: mapCategory(field('Category')),
+    mainCategory: mapCategory(field('Category'), title),
     cuisine: cleanText(field('Cuisine')) || undefined,
     servings: Math.max(1, Math.round(firstNumber(field('Servings')) ?? 4)),
     times: { total: parseTotalTime(field('Total Time')) },

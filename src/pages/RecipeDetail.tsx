@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe } from '../db'
 import { ingredientsForStep, scaleIngredientText, stepParagraphs } from '../lib/recipe'
+import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import type { Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -73,7 +74,7 @@ export default function RecipeDetail() {
   return (
     <article className="recipe-detail">
       <Link to="/" className="back-link">← All recipes</Link>
-      {recipe.image && (
+      {recipe.image ? (
         <img
           className="recipe-hero"
           src={recipe.image}
@@ -82,6 +83,14 @@ export default function RecipeDetail() {
             e.currentTarget.style.display = 'none'
           }}
         />
+      ) : (
+        <div
+          className="recipe-hero recipe-hero--ph"
+          style={{ background: placeholderGradient(recipe.mainCategory) }}
+          aria-hidden="true"
+        >
+          {placeholderEmoji(recipe.title, recipe.mainCategory)}
+        </div>
       )}
       <h1 className="page-title">{recipe.title}</h1>
 
