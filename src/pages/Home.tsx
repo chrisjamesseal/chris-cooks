@@ -10,6 +10,7 @@ export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
+  const [cuisine, setCuisine] = useState<string>('All')
 
   useEffect(() => {
     ensureSeeded()
@@ -20,11 +21,33 @@ export default function Home() {
       })
   }, [])
 
+  function selectCategory(c: MainCategory | 'All') {
+    setCategory(c)
+    setCuisine('All') // reset the sub-filter whenever the category changes
+  }
+
+  // Cuisines within the selected category that have at least two recipes, so the
+  // sub-filter stays a tidy handful rather than a wall of one-off tags.
+  const subCuisines = useMemo(() => {
+    if (!recipes || category === 'All') return []
+    const counts = new Map<string, number>()
+    for (const r of recipes) {
+      if (r.mainCategory === category && r.cuisine) {
+        counts.set(r.cuisine, (counts.get(r.cuisine) ?? 0) + 1)
+      }
+    }
+    return [...counts.entries()]
+      .filter(([, n]) => n >= 2)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([c]) => c)
+  }, [recipes, category])
+
   const filtered = useMemo(() => {
     if (!recipes) return []
     const q = query.trim().toLowerCase()
     return recipes.filter((r) => {
       if (category !== 'All' && r.mainCategory !== category) return false
+      if (cuisine !== 'All' && r.cuisine !== cuisine) return false
       if (!q) return true
       return (
         r.title.toLowerCase().includes(q) ||
@@ -32,7 +55,7 @@ export default function Home() {
         r.ingredients.some((i) => i.item.toLowerCase().includes(q))
       )
     })
-  }, [recipes, query, category])
+  }, [recipes, query, category, cuisine])
 
   const hasRecipes = recipes !== null && recipes.length > 0
 
@@ -73,7 +96,7 @@ export default function Home() {
             <button
               type="button"
               className={`filter-chip${category === 'All' ? ' filter-chip--active' : ''}`}
-              onClick={() => setCategory('All')}
+              onClick={() => selectCategory('All')}
             >
               All
             </button>
@@ -82,12 +105,34 @@ export default function Home() {
                 key={c}
                 type="button"
                 className={`filter-chip${category === c ? ' filter-chip--active' : ''}`}
-                onClick={() => setCategory(c)}
+                onClick={() => selectCategory(c)}
               >
                 {c}
               </button>
             ))}
           </div>
+
+          {subCuisines.length > 1 && (
+            <div className="filter-chips filter-chips--sub">
+              <button
+                type="button"
+                className={`filter-chip filter-chip--sm${cuisine === 'All' ? ' filter-chip--active' : ''}`}
+                onClick={() => setCuisine('All')}
+              >
+                All {category.toLowerCase()}
+              </button>
+              {subCuisines.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`filter-chip filter-chip--sm filter-chip--cuisine${cuisine === c ? ' filter-chip--active' : ''}`}
+                  onClick={() => setCuisine(c)}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
 
           {filtered.length === 0 ? (
             <p className="muted">No recipes match your search.</p>

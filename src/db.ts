@@ -35,7 +35,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '3'
+const SEED_VERSION = '4'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 const SEED_PREFIX = 'seed-'
 

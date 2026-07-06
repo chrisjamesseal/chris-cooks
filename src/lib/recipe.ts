@@ -9,12 +9,23 @@ export function newId(): string {
 
 const QTY_UNIT = /^\s*([\d./]+)\s*([a-zA-Z]+)?\s+(.*)$/
 
+/** Drop parenthetical notes and tidy spacing/punctuation from an ingredient line. */
+export function cleanIngredientLine(line: string): string {
+  return line
+    .replace(/\s*[([][^)\]]*[)\]]/g, '') // remove (…) and […] notes
+    .replace(/[()[\]]/g, ' ') // neutralise any orphan bracket (note split across lines)
+    .replace(/\s+,/g, ',') // fix " ," left behind
+    .replace(/\s{2,}/g, ' ')
+    .replace(/[\s,;]+$/, '')
+    .trim()
+}
+
 /**
  * Turn a free-text line like "2 cups flour" into a structured ingredient.
  * Parsing is best-effort: the original text is always kept in `raw`.
  */
 export function parseIngredient(line: string): Ingredient {
-  const raw = line.trim()
+  const raw = cleanIngredientLine(line)
   const base: Ingredient = { id: newId(), raw, item: raw }
   const match = QTY_UNIT.exec(raw)
   if (!match) return base
@@ -101,6 +112,27 @@ export function scaleIngredientText(ing: Ingredient, factor: number): string {
     : qty
   const line = [head, ing.item].filter(Boolean).join(' ')
   return ing.note ? `${line} (${ing.note})` : line
+}
+
+// Measurement units to strip from step prose (not time/temperature words).
+const MEASURE_UNITS =
+  'g|kg|mg|ml|l|cl|dl|tbsp|tbs|tbsps|tsp|tsps|oz|lb|lbs|cup|cups|clove|cloves|pinch|pinches|handful|handfuls|slice|slices|can|cans|tin|tins|sprig|sprigs|stick|sticks'
+
+/**
+ * Remove explicit measured quantities from a step's prose (e.g. "100g yogurt" →
+ * "yogurt", "2 tbsp oil" → "oil") so they don't contradict the per-serving
+ * ingredient pills once the recipe is scaled. Times, temperatures and bare
+ * counts are left alone.
+ */
+export function deQuantifyStep(text: string): string {
+  return text
+    .replace(new RegExp(`\\b[\\d./⁄–-]+\\s*(?:${MEASURE_UNITS})\\b\\.?`, 'gi'), '')
+    .replace(/\bthe\s+of\b/gi, 'the')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // Prep/measurement/descriptor words that shouldn't be used to match an

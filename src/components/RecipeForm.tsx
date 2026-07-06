@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import type { MainCategory, Nutrition, Recipe } from '../types'
-import { ingredientsFromText, parseSteps } from '../lib/recipe'
+import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import type { MainCategory, Nutrition, Recipe, Step } from '../types'
+import { ingredientsFromText, newId } from '../lib/recipe'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
 
@@ -29,8 +29,65 @@ export type RecipeDraft = {
   sourceUrl: string
   image: string
   ingredients: string
-  steps: string
+  steps: string[]
   nutrition: NutritionDraft
+}
+
+/** Textarea that grows to fit its content (no inner scrollbar). */
+function AutoTextarea({
+  value,
+  onChange,
+  className = '',
+  ...rest
+}: {
+  value: string
+  onChange: (v: string) => void
+} & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'>) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      className={`field__input field__input--auto ${className}`.trim()}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={1}
+      {...rest}
+    />
+  )
+}
+
+/** Downscale a chosen image and return a compact JPEG data URL. */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('decode failed'))
+      img.onload = () => {
+        const max = 1200
+        let { width, height } = img
+        const scale = Math.min(1, max / Math.max(width, height))
+        width = Math.round(width * scale)
+        height = Math.round(height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('no canvas'))
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
 function nutritionDraft(nutrition?: Nutrition): NutritionDraft {
@@ -54,7 +111,7 @@ function draftFromRecipe(recipe?: Recipe): RecipeDraft {
     sourceUrl: recipe?.source?.url ?? '',
     image: recipe?.image ?? '',
     ingredients: recipe?.ingredients.map((i) => i.raw).join('\n') ?? '',
-    steps: recipe?.steps.map((s) => s.text).join('\n') ?? '',
+    steps: recipe?.steps.length ? recipe.steps.map((s) => s.text) : [''],
     nutrition: nutritionDraft(recipe?.nutrition),
   }
 }
@@ -85,9 +142,32 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
   function set<K extends keyof RecipeDraft>(key: K, value: RecipeDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
   }
-
   function setNutrition(key: keyof Nutrition, value: string) {
     setDraft((d) => ({ ...d, nutrition: { ...d.nutrition, [key]: value } }))
+  }
+  function setStep(i: number, value: string) {
+    setDraft((d) => {
+      const steps = [...d.steps]
+      steps[i] = value
+      return { ...d, steps }
+    })
+  }
+  function addStep() {
+    setDraft((d) => ({ ...d, steps: [...d.steps, ''] }))
+  }
+  function removeStep(i: number) {
+    setDraft((d) => ({ ...d, steps: d.steps.filter((_, j) => j !== i) }))
+  }
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      set('image', await fileToDataUrl(file))
+    } catch {
+      setError('Sorry, that image could not be loaded.')
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -102,7 +182,10 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       setError('Add at least one ingredient.')
       return
     }
-    const steps = parseSteps(draft.steps)
+    const steps: Step[] = draft.steps
+      .map((t) => t.trim().replace(/^\d+[.)]\s*/, ''))
+      .filter(Boolean)
+      .map((text) => ({ id: newId(), text }))
     if (steps.length === 0) {
       setError('Add at least one step.')
       return
@@ -211,52 +294,61 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
         />
       </label>
 
-      <label className="field">
-        <span className="field__label">Photo URL <span className="field__hint">optional</span></span>
-        <input
-          className="field__input"
-          type="url"
-          value={draft.image}
-          onChange={(e) => set('image', e.target.value)}
-          placeholder="https://…"
-        />
-        {draft.image.trim() && (
-          <img
-            className="image-preview"
-            src={draft.image.trim()}
-            alt=""
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-        )}
-      </label>
+      <div className="field">
+        <span className="field__label">Photo <span className="field__hint">optional</span></span>
+        {draft.image && <img className="image-preview" src={draft.image} alt="" />}
+        <div className="photo-actions">
+          <label className="btn-ghost btn-file">
+            {draft.image ? 'Change photo' : 'Upload a photo'}
+            <input type="file" accept="image/*" onChange={handlePhoto} hidden />
+          </label>
+          {draft.image && (
+            <button type="button" className="link-btn" onClick={() => set('image', '')}>
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
 
       <label className="field">
         <span className="field__label">
           Ingredients <span className="field__hint">one per line</span>
         </span>
-        <textarea
-          className="field__input field__input--area"
+        <AutoTextarea
           value={draft.ingredients}
-          onChange={(e) => set('ingredients', e.target.value)}
-          rows={6}
+          onChange={(v) => set('ingredients', v)}
           placeholder={'200g spaghetti\n2 cloves garlic\n1 tbsp olive oil'}
         />
       </label>
 
-      <label className="field">
-        <span className="field__label">
-          Steps <span className="field__hint">one per line</span>
-        </span>
-        <textarea
-          className="field__input field__input--area"
-          value={draft.steps}
-          onChange={(e) => set('steps', e.target.value)}
-          rows={6}
-          placeholder={'Boil the pasta\nFry the garlic\nCombine and serve'}
-        />
-      </label>
+      <div className="field">
+        <span className="field__label">Steps</span>
+        <ol className="step-fields">
+          {draft.steps.map((s, i) => (
+            <li className="step-field" key={i}>
+              <span className="step-field__num">{i + 1}</span>
+              <AutoTextarea
+                value={s}
+                onChange={(v) => setStep(i, v)}
+                placeholder="Describe this step…"
+              />
+              {draft.steps.length > 1 && (
+                <button
+                  type="button"
+                  className="step-field__remove"
+                  onClick={() => removeStep(i)}
+                  aria-label={`Remove step ${i + 1}`}
+                >
+                  ×
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+        <button type="button" className="btn-ghost btn-add" onClick={addStep}>
+          + Add step
+        </button>
+      </div>
 
       <details className="nutrition-fieldset">
         <summary className="field__label">Nutrition <span className="field__hint">per serving, optional</span></summary>
@@ -276,17 +368,6 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
           ))}
         </div>
       </details>
-
-      <label className="field">
-        <span className="field__label">Source URL <span className="field__hint">optional</span></span>
-        <input
-          className="field__input"
-          type="url"
-          value={draft.sourceUrl}
-          onChange={(e) => set('sourceUrl', e.target.value)}
-          placeholder="https://…"
-        />
-      </label>
 
       {error && <p className="form-error" role="alert">{error}</p>}
 
