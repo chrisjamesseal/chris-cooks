@@ -46,7 +46,7 @@ export default function ImportBar({ onImported }: Props) {
           </button>
         </div>
       </label>
-      <p className="import-hint">We'll pull in the title, ingredients, steps and photo for you to review.</p>
+      <p className="import-hint">Supports recipe blogs, TikTok videos, and Instagram posts. We'll pull in the title, ingredients, steps and photo for you to review.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
     </form>
   )

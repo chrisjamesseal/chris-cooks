@@ -198,79 +198,6 @@ export default function RecipeDetail() {
         ))}
       </div>
 
-      <div className="healthier card">
-        <button
-          type="button"
-          className="healthier__head"
-          onClick={() => setHealthOpen((o) => !o)}
-          aria-expanded={healthOpen}
-        >
-          <span>🥗 Make it healthier</span>
-          <span className="healthier__chevron" aria-hidden="true">{healthOpen ? '▲' : '▼'}</span>
-        </button>
-        {healthOpen && (
-          <div className="healthier__body">
-            {!aiOn ? (
-              <p className="muted">
-                This uses an AI helper that needs a one-time setup.{' '}
-                <Link to="/changelog">See how</Link>.
-              </p>
-            ) : healthResult ? (
-              <>
-                <p className="muted">
-                  A lighter version with less {HEALTH_PRIORITIES.find((p) => p.key === priority)?.label.toLowerCase()}.
-                  {healthResult.changes.length === 0 && ' No big taste or texture changes.'}
-                </p>
-                {healthResult.changes.length > 0 && (
-                  <div className="healthier__flags">
-                    <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
-                    <ul>
-                      {healthResult.changes.map((c, i) => (
-                        <li key={i}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="form-actions">
-                  <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
-                    Keep original
-                  </button>
-                  <button type="button" className="btn-primary" onClick={applyHealthier}>
-                    Apply changes
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="muted">Reduce…</p>
-                <div className="filter-chips">
-                  {HEALTH_PRIORITIES.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      className={`filter-chip${priority === p.key ? ' filter-chip--active' : ''}`}
-                      onClick={() => setPriority(p.key)}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="btn-primary healthier__go"
-                  onClick={generateHealthier}
-                  disabled={healthLoading}
-                >
-                  {healthLoading ? 'Thinking…' : 'Suggest a healthier version'}
-                </button>
-                {healthError && <p className="form-error" role="alert">{healthError}</p>}
-                <p className="healthier__hint">Keeps the dish recognisable; you review before anything changes.</p>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
       <section>
         <h2 className="section-title">Ingredients</h2>
         <p className="scale-note">Select any items you already have to create a shopping list.</p>
@@ -398,6 +325,79 @@ export default function RecipeDetail() {
               </div>
             ))}
           </dl>
+
+          <div className="healthier card healthier--nutrition">
+            <button
+              type="button"
+              className="healthier__head"
+              onClick={() => setHealthOpen((o) => !o)}
+              aria-expanded={healthOpen}
+            >
+              <span>🥗 Tips to make it healthier</span>
+              <span className="healthier__chevron" aria-hidden="true">{healthOpen ? '▲' : '▼'}</span>
+            </button>
+            {healthOpen && (
+              <div className="healthier__body">
+                {!aiOn ? (
+                  <p className="muted">
+                    This uses an AI helper that needs a one-time setup.{' '}
+                    <Link to="/changelog">See how</Link>.
+                  </p>
+                ) : healthResult ? (
+                  <>
+                    <p className="muted">
+                      A lighter version with less {HEALTH_PRIORITIES.find((p) => p.key === priority)?.label.toLowerCase()}.
+                      {healthResult.changes.length === 0 && ' No big taste or texture changes.'}
+                    </p>
+                    {healthResult.changes.length > 0 && (
+                      <div className="healthier__flags">
+                        <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
+                        <ul>
+                          {healthResult.changes.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="form-actions">
+                      <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
+                        Keep original
+                      </button>
+                      <button type="button" className="btn-primary" onClick={applyHealthier}>
+                        Apply changes
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="muted">Reduce…</p>
+                    <div className="filter-chips">
+                      {HEALTH_PRIORITIES.map((p) => (
+                        <button
+                          key={p.key}
+                          type="button"
+                          className={`filter-chip${priority === p.key ? ' filter-chip--active' : ''}`}
+                          onClick={() => setPriority(p.key)}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary healthier__go"
+                      onClick={generateHealthier}
+                      disabled={healthLoading}
+                    >
+                      {healthLoading ? 'Thinking…' : 'Suggest a healthier version'}
+                    </button>
+                    {healthError && <p className="form-error" role="alert">{healthError}</p>}
+                    <p className="healthier__hint">Keeps the dish recognisable; you review before anything changes.</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </section>
       )}
 

@@ -263,6 +263,13 @@ function normalizeUrl(url: string): string {
   return trimmed
 }
 
+function detectVideoSource(url: string): 'tiktok' | 'instagram' | null {
+  const lower = url.toLowerCase()
+  if (/tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com/i.test(lower)) return 'tiktok'
+  if (/instagram\.com|instagr\.am/i.test(lower)) return 'instagram'
+  return null
+}
+
 // CORS proxies, tried in order. A static site can't fetch other origins
 // directly, so we route through a proxy when a direct request is blocked.
 const PROXIES: ((url: string) => string)[] = [
@@ -289,6 +296,58 @@ export class ImportError extends Error {}
  * proxy holding the API key), scraped text is sent through it to fix odd
  * formatting/typos. No-op — and never fails the import — when unset.
  */
+function extractVideoCaption(html: string): string | null {
+  // Try to extract caption from Open Graph meta tags
+  const ogDescriptionMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']*)["']/i)
+  if (ogDescriptionMatch?.[1]) return decodeHTMLEntities(ogDescriptionMatch[1])
+
+  // Try to extract from standard meta description
+  const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i)
+  if (metaDescMatch?.[1]) return decodeHTMLEntities(metaDescMatch[1])
+
+  // TikTok: try to find caption in JSON-LD or data attributes
+  const tiktokMatch = html.match(/"desc":"([^"]*)"/)
+  if (tiktokMatch?.[1]) return decodeHTMLEntities(tiktokMatch[1])
+
+  // Instagram: try to find caption in JSON data
+  const igMatch = html.match(/"caption":"([^"]*)"/)
+  if (igMatch?.[1]) return decodeHTMLEntities(igMatch[1])
+
+  return null
+}
+
+function decodeHTMLEntities(text: string): string {
+  const textarea = new DOMParser().parseFromString(text, 'text/html').documentElement.textContent
+  return textarea || text
+}
+
+function parseVideoCaption(caption: string): { ingredients: string[]; steps: string[] } {
+  const lines = caption.split('\n').map((l) => l.trim()).filter(Boolean)
+  const ingredients: string[] = []
+  const steps: string[] = []
+
+  let inSteps = false
+  for (const line of lines) {
+    // Simple heuristic: if line starts with a number or common cooking verbs, it's likely a step
+    if (/^[0-9]+[.)]\s*|^(heat|cook|mix|add|stir|bake|fry|boil|simmer|blend|combine|spread|pour|top|cover)/i.test(line)) {
+      inSteps = true
+      steps.push(line.replace(/^[0-9]+[.)]\s*/, ''))
+    } else if (inSteps && /^[a-z]/i.test(line) && !line.includes('cups') && !line.includes('tbsp') && !line.includes('g ') && steps.length === 0) {
+      // If we haven't found steps yet, treat early lines as ingredients
+      ingredients.push(line)
+    } else if (!inSteps) {
+      ingredients.push(line)
+    } else {
+      steps.push(line)
+    }
+  }
+
+  return {
+    ingredients: ingredients.length > 0 ? ingredients : ['See video caption for ingredients'],
+    steps: steps.length > 0 ? steps : [caption],
+  }
+}
+
 async function aiCleanup(recipe: Recipe): Promise<Recipe> {
   const endpoint = import.meta.env.VITE_AI_CLEANUP_URL
   if (!endpoint) return recipe
@@ -325,8 +384,63 @@ async function aiCleanup(recipe: Recipe): Promise<Recipe> {
   }
 }
 
+function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' | 'instagram'): Recipe | null {
+  const caption = extractVideoCaption(html)
+  if (!caption) return null
+
+  const { ingredients, steps } = parseVideoCaption(caption)
+  const now = Date.now()
+
+  // Try to extract a title from the caption (first line or first 50 chars)
+  const captionLines = caption.split('\n')
+  const title =
+    captionLines[0] && captionLines[0].length < 60
+      ? captionLines[0]
+          .replace(/^(easiest|quickest|best|simple|quick|healthy|easy)\s+/i, '')
+          .replace(/recipe\s*/i, '')
+          .trim()
+      : caption.substring(0, 50).trim()
+
+  return {
+    id: newId(),
+    schemaVersion: 1,
+    title: title || `Recipe from ${sourceType}`,
+    source: { type: sourceType, url: sourceUrl },
+    mainCategory: 'Dinner',
+    servings: 1,
+    times: {},
+    ingredients: ingredients.map(parseIngredient).filter((i) => i.raw),
+    steps: steps.map((text) => ({ id: newId(), text })),
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export async function importRecipeFromUrl(url: string): Promise<Recipe> {
   const target = normalizeUrl(url)
+  const videoSource = detectVideoSource(target)
+
+  // Try video import first if it's a video URL
+  if (videoSource) {
+    const attempts = [target, ...PROXIES.map((p) => p(target))]
+    for (const attempt of attempts) {
+      let html: string
+      try {
+        html = await fetchText(attempt)
+      } catch {
+        continue
+      }
+      const recipe = parseVideoRecipe(html, target, videoSource)
+      if (recipe && (recipe.ingredients.length > 0 || recipe.steps.length > 0)) {
+        return aiCleanup(recipe)
+      }
+    }
+    throw new ImportError(
+      `Couldn't extract recipe caption from the ${videoSource} video. Try copying the caption text manually.`,
+    )
+  }
+
+  // Fall back to standard recipe import
   const attempts = [target, ...PROXIES.map((p) => p(target))]
   let reachedPage = false
 
