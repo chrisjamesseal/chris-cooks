@@ -299,19 +299,19 @@ export class ImportError extends Error {}
 function extractVideoCaption(html: string): string | null {
   // Try to extract caption from Open Graph meta tags
   const ogDescriptionMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']*)["']/i)
-  if (ogDescriptionMatch?.[1]) return decodeHTMLEntities(ogDescriptionMatch[1])
+  if (ogDescriptionMatch?.[1]) return unescapeCaption(decodeHTMLEntities(ogDescriptionMatch[1]))
 
   // Try to extract from standard meta description
   const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i)
-  if (metaDescMatch?.[1]) return decodeHTMLEntities(metaDescMatch[1])
+  if (metaDescMatch?.[1]) return unescapeCaption(decodeHTMLEntities(metaDescMatch[1]))
 
   // TikTok: try to find caption in JSON-LD or data attributes
   const tiktokMatch = html.match(/"desc":"([^"]*)"/)
-  if (tiktokMatch?.[1]) return decodeHTMLEntities(tiktokMatch[1])
+  if (tiktokMatch?.[1]) return unescapeCaption(decodeHTMLEntities(tiktokMatch[1]))
 
   // Instagram: try to find caption in JSON data
   const igMatch = html.match(/"caption":"([^"]*)"/)
-  if (igMatch?.[1]) return decodeHTMLEntities(igMatch[1])
+  if (igMatch?.[1]) return unescapeCaption(decodeHTMLEntities(igMatch[1]))
 
   return null
 }
@@ -321,30 +321,73 @@ function decodeHTMLEntities(text: string): string {
   return textarea || text
 }
 
-function parseVideoCaption(caption: string): { ingredients: string[]; steps: string[] } {
-  const lines = caption.split('\n').map((l) => l.trim()).filter(Boolean)
+/** JSON-embedded captions carry line breaks as literal backslash-n; turn those back into real newlines. */
+function unescapeCaption(text: string): string {
+  return text.replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\\"/g, '"')
+}
+
+/**
+ * Instagram/Facebook's og:description wraps the real caption in a stats
+ * preamble, e.g. `8,633 Likes, 48 Comments - someuser on May 28, 2026: "…"`.
+ * Strip that off (keeping the username for a title fallback) along with the
+ * quote marks the preamble wraps the caption in.
+ */
+function stripCaptionPreamble(caption: string): { text: string; username?: string } {
+  const preamble = caption.match(/^[\d,.]+\s*(?:likes?|views?)(?:,\s*[\d,.]+\s*comments?)?\s*-\s*([^\s:]+)[^:]*:\s*[""]?/i)
+  let text = preamble ? caption.slice(preamble[0].length) : caption
+  text = text.replace(/[""]\s*\.?\s*$/, '').trim()
+  return { text, username: preamble?.[1] }
+}
+
+// Short calls-to-action that show up in recipe captions but carry no
+// ingredient/step content of their own (e.g. "One serving👇", "Enjoyyy😍").
+const FILLER_LINE_RE =
+  /^(enjoy+|one serving|full recipe|recipe below|swipe|save (this|it) for later|tag someone|let me know|follow for more|comment|serves? \d+)\b.*$/i
+
+// A short, mostly-uppercase line (optionally led by an emoji) used to label a
+// group of ingredients, e.g. "🍞 MAIN BITS" or "SAUCE".
+const SECTION_HEADER_RE = /^(?:\p{Emoji_Presentation}\s*)?[A-Z][A-Z &]{1,25}$/u
+
+const INGREDIENT_LINE_RE =
+  /^[\d¼½¾⅓⅔]|^(a|an|one|two|three|four|half)\s|\b(g|kg|ml|l|tbsp|tsp|cup|oz|lb|clove|slice|pinch)s?\b/i
+
+const STEP_LINE_RE =
+  /^[0-9]+[.)]\s*|^(heat|cook|mix|add|stir|bake|fry|boil|simmer|blend|combine|spread|pour|top|cover|whisk|chop|slice|dice|season|marinate|preheat|drain|rinse|serve|garnish)\b/i
+
+function parseVideoCaption(caption: string): { title?: string; ingredients: string[]; steps: string[] } {
+  const { text, username } = stripCaptionPreamble(caption)
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+
+  let title: string | undefined
   const ingredients: string[] = []
   const steps: string[] = []
-
   let inSteps = false
+
   for (const line of lines) {
-    // Simple heuristic: if line starts with a number or common cooking verbs, it's likely a step
-    if (/^[0-9]+[.)]\s*|^(heat|cook|mix|add|stir|bake|fry|boil|simmer|blend|combine|spread|pour|top|cover)/i.test(line)) {
+    if (FILLER_LINE_RE.test(line) || SECTION_HEADER_RE.test(line)) continue
+
+    if (STEP_LINE_RE.test(line)) {
       inSteps = true
       steps.push(line.replace(/^[0-9]+[.)]\s*/, ''))
-    } else if (inSteps && /^[a-z]/i.test(line) && !line.includes('cups') && !line.includes('tbsp') && !line.includes('g ') && steps.length === 0) {
-      // If we haven't found steps yet, treat early lines as ingredients
+    } else if (INGREDIENT_LINE_RE.test(line)) {
       ingredients.push(line)
-    } else if (!inSteps) {
-      ingredients.push(line)
-    } else {
+    } else if (inSteps) {
       steps.push(line)
+    } else if (!title && line.length >= 8 && line.length <= 70) {
+      // First substantial, non-ingredient, non-filler line is likely the dish name.
+      title = line.replace(/^(easiest|quickest|best|simple|quick|healthy|easy)\s+/i, '').replace(/recipe\s*/i, '').trim()
+    } else {
+      ingredients.push(line)
     }
   }
 
   return {
+    title: title || (username ? `Recipe by @${username}` : undefined),
     ingredients: ingredients.length > 0 ? ingredients : ['See video caption for ingredients'],
-    steps: steps.length > 0 ? steps : [caption],
+    steps:
+      steps.length > 0
+        ? steps
+        : ['Full method not included in the caption — check the original video for step-by-step instructions.'],
   }
 }
 
@@ -388,23 +431,13 @@ function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' 
   const caption = extractVideoCaption(html)
   if (!caption) return null
 
-  const { ingredients, steps } = parseVideoCaption(caption)
+  const { title, ingredients, steps } = parseVideoCaption(caption)
   const now = Date.now()
-
-  // Try to extract a title from the caption (first line or first 50 chars)
-  const captionLines = caption.split('\n')
-  const title =
-    captionLines[0] && captionLines[0].length < 60
-      ? captionLines[0]
-          .replace(/^(easiest|quickest|best|simple|quick|healthy|easy)\s+/i, '')
-          .replace(/recipe\s*/i, '')
-          .trim()
-      : caption.substring(0, 50).trim()
 
   return {
     id: newId(),
     schemaVersion: 1,
-    title: title || `Recipe from ${sourceType}`,
+    title: title || `Imported ${sourceType} recipe`,
     source: { type: sourceType, url: sourceUrl },
     mainCategory: 'Dinner',
     servings: 1,
