@@ -13,6 +13,9 @@ export type Recipe = {
   ingredients: Ingredient[]
   steps: Step[]
   nutrition?: Nutrition
+  favorite?: boolean
+  cookedCount?: number
+  lastCookedAt?: number
   createdAt: number
   updatedAt: number
 }

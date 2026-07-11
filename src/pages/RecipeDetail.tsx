@@ -18,6 +18,8 @@ import {
 } from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { healthierTips } from '../lib/healthier'
+import { inPlan, togglePlan } from '../lib/plan'
+import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
 import type { Ingredient, Nutrition, Recipe } from '../types'
@@ -144,6 +146,11 @@ export default function RecipeDetail() {
   const [timerDone, setTimerDone] = useState<string | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
   const audioRef = useRef<AudioContext | null>(null)
+  const [planned, setPlanned] = useState(false)
+
+  useEffect(() => {
+    if (id) setPlanned(inPlan(id))
+  }, [id])
 
   useEffect(() => {
     if (!id) return
@@ -264,19 +271,33 @@ export default function RecipeDetail() {
     )
   }
 
-  // Name of the one-time Apple Shortcut that adds each line as its own reminder.
-  const SHORTCUT_NAME = 'Add to Shopping List'
-
   function sendToReminders() {
     const remaining = loaded.ingredients.filter((i) => !have.has(i.id)).map((i) => scaleIngredientText(i, factor))
     if (remaining.length === 0) return
-    const text = remaining.join('\n')
-    // Copy first as a universal fallback (Reminders splits a multi-line paste
-    // into separate items), then hand off to the Shortcut for one-tap add.
-    navigator.clipboard?.writeText(text).catch(() => {})
-    const url = `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(text)}`
-    window.location.href = url
+    sendToShoppingList(remaining)
     flash('Opening Reminders… (list also copied)')
+  }
+
+  async function toggleFavorite() {
+    const updated: Recipe = { ...loaded, favorite: !loaded.favorite }
+    await saveRecipe(updated)
+    setRecipe(updated)
+    flash(updated.favorite ? 'Added to favourites ♥' : 'Removed from favourites')
+  }
+
+  function handleTogglePlan() {
+    const nowIn = togglePlan(loaded.id)
+    setPlanned(nowIn)
+    flash(nowIn ? 'Added to this week 🗓' : 'Removed from this week')
+  }
+
+  async function markCooked() {
+    const count = (loaded.cookedCount ?? 0) + 1
+    const updated: Recipe = { ...loaded, cookedCount: count, lastCookedAt: Date.now() }
+    await saveRecipe(updated)
+    setRecipe(updated)
+    setCompletedThrough(-1)
+    flash(count === 1 ? 'First cook logged 🍽' : `Cooked ${count} times 🍽`)
   }
 
   function flash(msg: string) {
@@ -387,6 +408,28 @@ export default function RecipeDetail() {
         {times.map((t) => (
           <span className="chip" key={t as string}>{t}</span>
         ))}
+        {(recipe.cookedCount ?? 0) > 0 && (
+          <span className="chip">🍽 Cooked {recipe.cookedCount}×</span>
+        )}
+      </div>
+
+      <div className="recipe-actions">
+        <button
+          type="button"
+          className={`recipe-action${recipe.favorite ? ' recipe-action--on' : ''}`}
+          onClick={toggleFavorite}
+          aria-pressed={!!recipe.favorite}
+        >
+          {recipe.favorite ? '♥ Favourite' : '♡ Favourite'}
+        </button>
+        <button
+          type="button"
+          className={`recipe-action${planned ? ' recipe-action--on' : ''}`}
+          onClick={handleTogglePlan}
+          aria-pressed={planned}
+        >
+          {planned ? '🗓 In this week ✓' : '🗓 Add to this week'}
+        </button>
       </div>
 
       {video && !recipe.image && (
@@ -516,6 +559,9 @@ export default function RecipeDetail() {
               )
             })}
           </ol>
+          <button type="button" className="btn-ghost btn-cooked" onClick={markCooked}>
+            🍽 I cooked this
+          </button>
         </section>
       )}
 

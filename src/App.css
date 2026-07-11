@@ -228,6 +228,60 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   justify-content: center;
   gap: 9px;
 }
+.btn-ghost--sm {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.page-head__actions { display: flex; gap: 8px; align-items: center; }
+
+/* Favourite & this-week actions on the recipe page */
+.recipe-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.recipe-action {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.recipe-action--on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.filter-chip--fav { color: #c2185b; }
+.filter-chip--fav.filter-chip--active { background: #c2185b; border-color: #c2185b; color: #fff; }
+.btn-cooked { width: 100%; margin-top: 12px; }
+
+/* This week plan */
+.plan-item { position: relative; }
+.plan-item .recipe-card { padding-right: 44px; }
+.plan-item__remove {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* Backup card */
+.backup-card { margin-top: 28px; display: grid; gap: 10px; }
+.backup-card__title { font-size: 15px; font-weight: 700; margin: 0; }
+.backup-card__hint { margin: 0; font-size: 13px; }
+.backup-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.backup-card__msg { margin: 0; font-size: 13px; font-weight: 600; color: var(--green-dark); }
 .reminders-icon {
   width: 20px;
   height: 20px;

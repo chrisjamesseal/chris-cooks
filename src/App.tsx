@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import AddRecipe from './pages/AddRecipe'
 import EditRecipe from './pages/EditRecipe'
 import RecipeDetail from './pages/RecipeDetail'
+import ThisWeek from './pages/ThisWeek'
 import Changelog from './pages/Changelog'
 import './App.css'
 
@@ -19,6 +20,7 @@ function App() {
           <Route path="/add" element={<AddRecipe />} />
           <Route path="/recipe/:id" element={<RecipeDetail />} />
           <Route path="/recipe/:id/edit" element={<EditRecipe />} />
+          <Route path="/plan" element={<ThisWeek />} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>
       </main>
