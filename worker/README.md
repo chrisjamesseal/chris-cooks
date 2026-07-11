@@ -6,6 +6,20 @@ a static site, the API key can't live in the browser — this tiny Cloudflare
 Worker holds it server-side. It's **optional**: without it, URL imports work
 exactly as before, just without the AI polish.
 
+The Worker handles three modes:
+
+- **cleanup** (default) — tidies scraped recipe text on URL imports.
+- **healthier** — rewrites a recipe to be lighter; powers the "Rewrite this
+  recipe to be healthier" button. (The rule-based tips work without the Worker.)
+- **video** — deep TikTok/Instagram import: the Worker fetches the video page
+  server-side, reads the caption *and the video's cover image* with Claude, and
+  returns a complete recipe — proper dish name, ingredients, method, servings,
+  category and photo. Without the Worker, video imports fall back to parsing
+  the caption text only.
+
+If you deployed the Worker before the video mode existed, redeploy with the
+same command below to pick up the new code.
+
 ## Deploy
 
 1. Install Wrangler and log in:

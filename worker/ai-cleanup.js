@@ -49,6 +49,24 @@ const CLEANUP_SCHEMA = {
   },
 }
 
+const VIDEO_SYSTEM = `You extract a structured recipe from a social cooking video's public data: its caption text and its cover image. The dish name is often only shown on-screen in the video, so use the cover image to identify the dish and name it — "title" must be a short, appetising dish name (no emojis, no the word "recipe", no creator handles or stats). If the caption lists ingredients, preserve their exact quantities and wording; do not invent quantities. If the caption has no method, write a concise, sensible step-by-step method for this exact dish based on the ingredients and what the image shows. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of Breakfast, Lunch, Dinner, Dessert, Snack. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated or safely inferable, else null.`
+
+const VIDEO_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'ingredients', 'steps', 'servings', 'category', 'cuisine', 'prep', 'cook'],
+  properties: {
+    title: { type: 'string' },
+    ingredients: { type: 'array', items: { type: 'string' } },
+    steps: { type: 'array', items: { type: 'string' } },
+    servings: { type: 'integer' },
+    category: { type: 'string', enum: ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'] },
+    cuisine: { type: ['string', 'null'] },
+    prep: { type: ['string', 'null'] },
+    cook: { type: ['string', 'null'] },
+  },
+}
+
 export default {
   async fetch(request, env) {
     const origin = env.ALLOWED_ORIGIN || '*'
@@ -71,6 +89,10 @@ export default {
       body = await request.json()
     } catch {
       return json({ error: 'Invalid JSON' }, 400, cors)
+    }
+
+    if (body.mode === 'video') {
+      return handleVideoImport(body, env, cors)
     }
 
     const healthier = body.mode === 'healthier'
@@ -129,6 +151,121 @@ export default {
 
     return json(cleaned, 200, cors)
   },
+}
+
+/**
+ * mode: 'video' — deep import for TikTok/Instagram links. The Worker fetches
+ * the video page itself (no browser CORS limits here), pulls the caption and
+ * cover image out of the og: meta tags, then asks Claude to read both and
+ * return a complete structured recipe. The cover image is echoed back as a
+ * data URL so the app can store it locally before the platform's signed CDN
+ * link expires.
+ */
+async function handleVideoImport(body, env, cors) {
+  const url = typeof body.url === 'string' ? body.url.trim() : ''
+  if (!/^https:\/\/([\w-]+\.)*(instagram\.com|instagr\.am|tiktok\.com)\//i.test(url)) {
+    return json({ error: 'Only TikTok and Instagram URLs are supported' }, 400, cors)
+  }
+
+  let html = ''
+  try {
+    // A crawler UA gets the og: meta tags without a login wall.
+    const page = await fetch(url, {
+      headers: { 'user-agent': 'facebookexternalhit/1.1' },
+      redirect: 'follow',
+    })
+    html = await page.text()
+  } catch {
+    return json({ error: 'Could not reach that page' }, 502, cors)
+  }
+
+  const meta = (prop) => {
+    const m =
+      html.match(new RegExp(`<meta[^>]*property=["']${prop}["'][^>]*content=["']([^"']+)["']`, 'i')) ||
+      html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']${prop}["']`, 'i'))
+    return m ? decodeEntities(m[1]) : ''
+  }
+  const caption = meta('og:description')
+  const pageTitle = meta('og:title')
+  const imageUrl = meta('og:image')
+  if (!caption && !imageUrl) {
+    return json({ error: 'Could not read a caption or image from that page' }, 502, cors)
+  }
+
+  let imageBlock = null
+  let imageDataUrl = null
+  if (imageUrl) {
+    try {
+      const imgRes = await fetch(imageUrl)
+      const type = (imgRes.headers.get('content-type') || 'image/jpeg').split(';')[0]
+      if (imgRes.ok && type.startsWith('image/')) {
+        const b64 = base64(await imgRes.arrayBuffer())
+        imageBlock = { type: 'image', source: { type: 'base64', media_type: type, data: b64 } }
+        imageDataUrl = `data:${type};base64,${b64}`
+      }
+    } catch {
+      // Caption-only extraction still works.
+    }
+  }
+
+  const content = []
+  if (imageBlock) content.push(imageBlock)
+  content.push({ type: 'text', text: JSON.stringify({ caption, page_title: pageTitle }) })
+
+  let res
+  try {
+    res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4096,
+        system: VIDEO_SYSTEM,
+        output_config: { format: { type: 'json_schema', schema: VIDEO_SCHEMA } },
+        messages: [{ role: 'user', content }],
+      }),
+    })
+  } catch (e) {
+    return json({ error: `Upstream fetch failed: ${e}` }, 502, cors)
+  }
+  if (!res.ok) return json({ error: `Anthropic API ${res.status}` }, 502, cors)
+
+  const data = await res.json()
+  const text = (data.content || [])
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+  let recipe
+  try {
+    recipe = JSON.parse(text)
+  } catch {
+    return json({ error: 'Could not parse model output' }, 502, cors)
+  }
+  recipe.image = imageDataUrl
+  return json(recipe, 200, cors)
+}
+
+function base64(buf) {
+  const bytes = new Uint8Array(buf)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  }
+  return btoa(bin)
+}
+
+function decodeEntities(s) {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&#x27;/gi, "'")
 }
 
 function json(obj, status, cors) {

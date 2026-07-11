@@ -1,4 +1,4 @@
-import type { MainCategory, Nutrition, Recipe, Step } from '../types'
+import type { Ingredient, MainCategory, Nutrition, Recipe, Step } from '../types'
 import { newId, parseIngredient } from './recipe'
 
 /**
@@ -394,7 +394,12 @@ const INGREDIENT_LINE_RE =
 const STEP_LINE_RE =
   /^[0-9]+[.)]\s*|^(heat|cook|mix|add|stir|bake|fry|boil|simmer|blend|combine|spread|pour|top|cover|whisk|chop|slice|dice|season|marinate|preheat|drain|rinse|serve|garnish)\b/i
 
-function parseVideoCaption(caption: string): { title?: string; ingredients: string[]; steps: string[] } {
+function parseVideoCaption(caption: string): {
+  title?: string
+  username?: string
+  ingredients: string[]
+  steps: string[]
+} {
   const { text, username } = stripCaptionPreamble(caption)
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
 
@@ -422,13 +427,26 @@ function parseVideoCaption(caption: string): { title?: string; ingredients: stri
   }
 
   return {
-    title: title || (username ? `Recipe by @${username}` : undefined),
+    title,
+    username,
     ingredients: ingredients.length > 0 ? ingredients : ['See video caption for ingredients'],
     steps:
       steps.length > 0
         ? steps
         : ['Full method not included in the caption — check the original video for step-by-step instructions.'],
   }
+}
+
+/**
+ * When a caption never names the dish (very common on reels — the name is
+ * on-screen in the video), build a workable title from the main ingredients,
+ * e.g. "Baby potatoes & chicken breast". Beats "Recipe by @user".
+ */
+function titleFromIngredients(ingredients: Ingredient[]): string | undefined {
+  const items = ingredients.map((i) => i.item.trim()).filter((s) => s.length > 2)
+  if (items.length < 2) return undefined
+  const main = items[0][0].toUpperCase() + items[0].slice(1)
+  return `${main} & ${items[1]}`
 }
 
 async function aiCleanup(recipe: Recipe): Promise<Recipe> {
@@ -471,21 +489,96 @@ function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' 
   const caption = extractVideoCaption(html)
   if (!caption) return null
 
-  const { title, ingredients, steps } = parseVideoCaption(caption)
+  const { title, username, ingredients, steps } = parseVideoCaption(caption)
   const now = Date.now()
+  const parsedIngredients = ingredients.map(parseIngredient).filter((i) => i.raw)
 
   return {
     id: newId(),
     schemaVersion: 1,
-    title: title || `Imported ${sourceType} recipe`,
+    title:
+      title ||
+      titleFromIngredients(parsedIngredients) ||
+      (username ? `Recipe by @${username}` : `Imported ${sourceType} recipe`),
     source: { type: sourceType, url: sourceUrl },
     mainCategory: 'Dinner',
     servings: 1,
     times: {},
-    ingredients: ingredients.map(parseIngredient).filter((i) => i.raw),
+    ingredients: parsedIngredients,
     steps: steps.map((text) => ({ id: newId(), text })),
     createdAt: now,
     updatedAt: now,
+  }
+}
+
+const MAIN_CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
+
+/**
+ * Deep video import via the AI worker (when configured): the worker fetches
+ * the video page server-side, reads the caption AND the cover image with
+ * Claude, and returns a full structured recipe — proper dish title included.
+ * Returns null (falling back to client-side caption parsing) on any failure.
+ */
+async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): Promise<Recipe | null> {
+  const endpoint = import.meta.env.VITE_AI_CLEANUP_URL
+  if (!endpoint) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 60000)
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode: 'video', url }),
+      signal: controller.signal,
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      title?: string
+      ingredients?: string[]
+      steps?: string[]
+      servings?: number
+      category?: string
+      cuisine?: string | null
+      prep?: string | null
+      cook?: string | null
+      image?: string | null
+    }
+    const ingredients = Array.isArray(data.ingredients)
+      ? data.ingredients.map((l) => parseIngredient(cleanText(String(l)))).filter((i) => i.raw)
+      : []
+    const steps = Array.isArray(data.steps)
+      ? data.steps.map((t) => ({ id: newId(), text: cleanText(String(t)) })).filter((s) => s.text)
+      : []
+    if (!data.title || ingredients.length === 0 || steps.length === 0) return null
+    const now = Date.now()
+    return {
+      id: newId(),
+      schemaVersion: 1,
+      title: tidyTitle(cleanText(String(data.title))),
+      image:
+        typeof data.image === 'string' && data.image.startsWith('data:image/') ? data.image : undefined,
+      source: { type: sourceType, url },
+      mainCategory: MAIN_CATEGORIES.includes(data.category as MainCategory)
+        ? (data.category as MainCategory)
+        : 'Dinner',
+      cuisine: data.cuisine ? cleanText(String(data.cuisine)) || undefined : undefined,
+      servings:
+        typeof data.servings === 'number' && Number.isFinite(data.servings) && data.servings >= 1
+          ? Math.round(data.servings)
+          : 1,
+      times: {
+        prep: data.prep ? cleanText(String(data.prep)) || undefined : undefined,
+        cook: data.cook ? cleanText(String(data.cook)) || undefined : undefined,
+      },
+      ingredients,
+      steps,
+      createdAt: now,
+      updatedAt: now,
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -495,6 +588,11 @@ export async function importRecipeFromUrl(url: string): Promise<Recipe> {
 
   // Try video import first if it's a video URL
   if (videoSource) {
+    // Best path: the AI worker reads the caption and the video's cover image
+    // together and returns a complete recipe with a real dish name.
+    const aiRecipe = await aiVideoImport(target, videoSource)
+    if (aiRecipe) return aiRecipe
+
     const attempts = [target, ...PROXIES.map((p) => p(target))]
     for (const attempt of attempts) {
       let html: string
