@@ -17,6 +17,7 @@ import {
   type HealthPriority,
 } from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
+import { healthierTips } from '../lib/healthier'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
 import type { Ingredient, Nutrition, Recipe } from '../types'
@@ -83,6 +84,30 @@ function timerLabel(seconds: number): string {
   return `${Math.round(seconds / 60)} min`
 }
 
+/** A short repeating beep pattern, loud enough to hear across a kitchen. */
+function ringAlarm(ctx: AudioContext | null) {
+  if (!ctx) return
+  ctx.resume().catch(() => {})
+  const t0 = ctx.currentTime + 0.05
+  for (let i = 0; i < 8; i++) {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = i % 2 ? 660 : 880
+    const start = t0 + i * 0.45
+    gain.gain.setValueAtTime(0.0001, start)
+    gain.gain.exponentialRampToValueAtTime(0.5, start + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(start)
+    osc.stop(start + 0.42)
+  }
+}
+
+/** Id used for the quick timer in the Method header (not tied to a step). */
+const QUICK_TIMER = '__quick__'
+
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -94,18 +119,22 @@ export default function RecipeDetail() {
   const [have, setHave] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<string | null>(null)
   // "Make it healthier"
-  const [healthOpen, setHealthOpen] = useState(false)
   const [priority, setPriority] = useState<HealthPriority>('calories')
   const [healthLoading, setHealthLoading] = useState(false)
   const [healthResult, setHealthResult] = useState<HealthierResult | null>(null)
   const [healthError, setHealthError] = useState<string | null>(null)
   const aiOn = !!aiEndpoint()
-  // Cook mode (keep the screen awake) + one running step timer at a time.
+  // Cook mode (keep the screen awake) + one running timer at a time. When a
+  // timer finishes it rings and stays in a "done" state until dismissed, so a
+  // finished timer can't be missed. The AudioContext is created on the start
+  // tap (a user gesture) so iOS allows the alarm to play.
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
   const [cookMode, setCookMode] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
   const [timer, setTimer] = useState<{ stepId: string; endsAt: number } | null>(null)
+  const [timerDone, setTimerDone] = useState<string | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const audioRef = useRef<AudioContext | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -172,11 +201,11 @@ export default function RecipeDetail() {
 
   useEffect(() => {
     if (timer && nowTick >= timer.endsAt) {
+      setTimerDone(timer.stepId)
       setTimer(null)
-      navigator.vibrate?.([300, 150, 300])
-      flash('⏱ Timer done!')
+      navigator.vibrate?.([300, 150, 300, 150, 300])
+      ringAlarm(audioRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer, nowTick])
 
   if (recipe === undefined) return <p className="muted">Loading…</p>
@@ -216,8 +245,39 @@ export default function RecipeDetail() {
   }
 
   function toggleTimer(stepId: string, seconds: number) {
+    // Create/resume the AudioContext inside the tap so iOS lets the alarm play later.
+    if (!audioRef.current) {
+      try {
+        audioRef.current = new AudioContext()
+      } catch {
+        // No Web Audio — vibration/visual state still signal completion.
+      }
+    }
+    audioRef.current?.resume().catch(() => {})
+    setTimerDone(null)
+    setNowTick(Date.now())
     setTimer((current) =>
       current?.stepId === stepId ? null : { stepId, endsAt: Date.now() + seconds * 1000 },
+    )
+  }
+
+  /** One chip that covers all three timer states: idle → counting down → done. */
+  function timerChip(stepId: string, seconds: number, idleLabel: string) {
+    const running = timer?.stepId === stepId
+    const done = timerDone === stepId
+    const remaining = running && timer ? Math.max(0, Math.ceil((timer.endsAt - nowTick) / 1000)) : 0
+    return (
+      <button
+        type="button"
+        className={`step-timer${running ? ' step-timer--running' : ''}${done ? ' step-timer--done' : ''}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (done) setTimerDone(null)
+          else toggleTimer(stepId, seconds)
+        }}
+      >
+        {done ? '⏱ Time’s up! Tap to dismiss' : running ? `⏱ ${formatCountdown(remaining)} · tap to cancel` : idleLabel}
+      </button>
     )
   }
 
@@ -268,7 +328,6 @@ export default function RecipeDetail() {
     setCompletedThrough(-1)
     setHave(new Set())
     setHealthResult(null)
-    setHealthOpen(false)
     flash('Updated to a healthier version')
   }
 
@@ -287,6 +346,7 @@ export default function RecipeDetail() {
     : []
 
   const video = videoInfoFromUrl(recipe.source?.url)
+  const tips = healthierTips(recipe)
 
   // Each ingredient appears as a pill only once across the method (its first
   // use) so an ingredient touched in several steps isn't doubled up.
@@ -439,14 +499,29 @@ export default function RecipeDetail() {
               </button>
             )}
           </div>
+          <div className="quick-timer">
+            <span className="quick-timer__label">⏱ Quick timer</span>
+            {timer?.stepId === QUICK_TIMER || timerDone === QUICK_TIMER ? (
+              timerChip(QUICK_TIMER, 0, '')
+            ) : (
+              [5, 10, 15].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="step-timer"
+                  onClick={() => toggleTimer(QUICK_TIMER, m * 60)}
+                >
+                  {m} min
+                </button>
+              ))
+            )}
+          </div>
           <p className="scale-note">Click on a step to mark it as complete.</p>
           <ol className="step-list">
             {recipe.steps.map((step, index) => {
               const used = stepPills[index]
               const done = index <= completedThrough
               const seconds = stepTimerSeconds(step.text)
-              const running = timer?.stepId === step.id
-              const remaining = running ? Math.max(0, Math.ceil((timer.endsAt - nowTick) / 1000)) : 0
               return (
                 <li
                   key={step.id}
@@ -467,19 +542,7 @@ export default function RecipeDetail() {
                     {stepParagraphs(deQuantifyStep(step.text)).map((para, i) => (
                       <p key={i}>{para}</p>
                     ))}
-                    {seconds !== undefined && (
-                      <button
-                        type="button"
-                        className={`step-timer${running ? ' step-timer--running' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleTimer(step.id, seconds)
-                        }}
-                        aria-label={running ? 'Cancel timer' : `Start ${timerLabel(seconds)} timer`}
-                      >
-                        {running ? `⏱ ${formatCountdown(remaining)} · tap to cancel` : `⏱ Start ${timerLabel(seconds)} timer`}
-                      </button>
-                    )}
+                    {seconds !== undefined && timerChip(step.id, seconds, `⏱ Start ${timerLabel(seconds)} timer`)}
                     {used.length > 0 && (
                       <div className="step-ingredients">
                         {used.map((ing) => (
@@ -524,78 +587,75 @@ export default function RecipeDetail() {
           </p>
         )}
 
-        <div className="healthier card healthier--nutrition">
-            <button
-              type="button"
-              className="healthier__head"
-              onClick={() => setHealthOpen((o) => !o)}
-              aria-expanded={healthOpen}
-            >
-              <span>🥗 Tips to make it healthier</span>
-              <span className="healthier__chevron" aria-hidden="true">{healthOpen ? '▲' : '▼'}</span>
-            </button>
-            {healthOpen && (
-              <div className="healthier__body">
-                {!aiOn ? (
+        <div className="healthier card">
+          <h3 className="healthier__title">🥗 Tips to make it healthier</h3>
+          {tips.length > 0 ? (
+            <ul className="health-tips">
+              {tips.map((t) => (
+                <li key={t.id}>
+                  <strong>{t.swap}</strong> {t.benefit}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No obvious swaps to suggest — this one already looks pretty lean.</p>
+          )}
+
+          {aiOn && (
+            <div className="healthier__body">
+              {healthResult ? (
+                <>
                   <p className="muted">
-                    This uses an AI helper that needs a one-time setup.{' '}
-                    <Link to="/changelog">See how</Link>.
+                    A lighter version with less {HEALTH_PRIORITIES.find((p) => p.key === priority)?.label.toLowerCase()}.
+                    {healthResult.changes.length === 0 && ' No big taste or texture changes.'}
                   </p>
-                ) : healthResult ? (
-                  <>
-                    <p className="muted">
-                      A lighter version with less {HEALTH_PRIORITIES.find((p) => p.key === priority)?.label.toLowerCase()}.
-                      {healthResult.changes.length === 0 && ' No big taste or texture changes.'}
-                    </p>
-                    {healthResult.changes.length > 0 && (
-                      <div className="healthier__flags">
-                        <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
-                        <ul>
-                          {healthResult.changes.map((c, i) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div className="form-actions">
-                      <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
-                        Keep original
-                      </button>
-                      <button type="button" className="btn-primary" onClick={applyHealthier}>
-                        Apply changes
-                      </button>
+                  {healthResult.changes.length > 0 && (
+                    <div className="healthier__flags">
+                      <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
+                      <ul>
+                        {healthResult.changes.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="muted">Reduce…</p>
-                    <div className="filter-chips">
-                      {HEALTH_PRIORITIES.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          className={`filter-chip${priority === p.key ? ' filter-chip--active' : ''}`}
-                          onClick={() => setPriority(p.key)}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-primary healthier__go"
-                      onClick={generateHealthier}
-                      disabled={healthLoading}
-                    >
-                      {healthLoading ? 'Thinking…' : 'Suggest a healthier version'}
+                  )}
+                  <div className="form-actions">
+                    <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
+                      Keep original
                     </button>
-                    {healthError && <p className="form-error" role="alert">{healthError}</p>}
-                    <p className="healthier__hint">Keeps the dish recognisable; you review before anything changes.</p>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+                    <button type="button" className="btn-primary" onClick={applyHealthier}>
+                      Apply changes
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="filter-chips">
+                    {HEALTH_PRIORITIES.map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        className={`filter-chip filter-chip--sm${priority === p.key ? ' filter-chip--active' : ''}`}
+                        onClick={() => setPriority(p.key)}
+                      >
+                        Less {p.label.toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary healthier__go"
+                    onClick={generateHealthier}
+                    disabled={healthLoading}
+                  >
+                    {healthLoading ? 'Thinking…' : 'Rewrite this recipe to be healthier'}
+                  </button>
+                  {healthError && <p className="form-error" role="alert">{healthError}</p>}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </section>
 
       {recipe.source?.url && !video && (

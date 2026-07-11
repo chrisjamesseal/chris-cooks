@@ -235,6 +235,24 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
+.step-timer--done {
+  background: #b3261e;
+  border-color: #b3261e;
+  color: #fff;
+  animation: timer-done-pulse 1s ease-in-out infinite;
+}
+@keyframes timer-done-pulse {
+  50% { opacity: 0.65; }
+}
+.quick-timer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.quick-timer__label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.quick-timer .step-timer { margin: 0; }
 
 /* Video source (TikTok / Instagram) */
 .video-embed {
@@ -334,7 +352,32 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .chip--cuisine { text-transform: capitalize; }
 
 /* Make it healthier */
-.healthier { padding: 0; overflow: hidden; margin-bottom: 20px; }
+.healthier { padding: 14px 16px 16px; overflow: hidden; margin-bottom: 20px; }
+.healthier__title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
+.health-tips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.health-tips li {
+  font-size: 14px;
+  line-height: 1.5;
+  padding-left: 22px;
+  position: relative;
+}
+.health-tips li::before {
+  content: '↺';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+}
+.health-tips strong { font-weight: 600; }
+.health-tips li strong + * { color: var(--muted); }
+.health-tips li { color: var(--muted); }
+.health-tips li strong { color: var(--ink); display: block; }
 .healthier__head {
   width: 100%;
   display: flex;
@@ -350,10 +393,10 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 }
 .healthier__chevron { color: var(--muted); font-size: 12px; }
 .healthier__body {
-  padding: 0 16px 16px;
   display: grid;
   gap: 12px;
   border-top: 1px solid var(--line);
+  margin-top: 14px;
   padding-top: 14px;
 }
 .healthier__go { width: 100%; }
