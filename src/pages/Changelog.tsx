@@ -4,6 +4,16 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.3.0',
+    title: 'Your week, your favourites, your backup',
+    notes: [
+      'This week: add recipes to a weekly plan, then send every ingredient from every planned meal to your shopping list in one tap. Find it at the top of the home screen.',
+      'Favourites: tap ♥ on any recipe and filter to just your favourites at home.',
+      '“I cooked this”: log each cook at the end of the method — recipes remember how many times you’ve made them.',
+      'Backup & restore: download all your recipes as a single file from the bottom of the home screen, and restore them any time. Your collection is now un-losable.',
+    ],
+  },
+  {
     version: '1.2.0',
     title: 'Shopping list polish & editable sources',
     notes: [

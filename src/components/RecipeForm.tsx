@@ -225,6 +225,9 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       ingredients,
       steps,
       nutrition: buildNutrition(draft.nutrition),
+      favorite: initial?.favorite,
+      cookedCount: initial?.cookedCount,
+      lastCookedAt: initial?.lastCookedAt,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     }

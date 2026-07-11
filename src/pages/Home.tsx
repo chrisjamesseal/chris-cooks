@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ensureSeeded, getAllRecipes } from '../db'
+import { downloadBackup, restoreBackup } from '../lib/backup'
+import { getPlan } from '../lib/plan'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
 import type { MainCategory, Recipe } from '../types'
@@ -28,6 +30,10 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
   const [cuisine, setCuisine] = useState<string>('All')
+  const [favOnly, setFavOnly] = useState(false)
+  const [planCount] = useState(() => getPlan().length)
+  const [backupMsg, setBackupMsg] = useState<string | null>(null)
+  const restoreInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     ensureSeeded()
@@ -37,6 +43,30 @@ export default function Home() {
         setRecipes(list)
       })
   }, [])
+
+  async function handleBackup() {
+    try {
+      const n = await downloadBackup()
+      setBackupMsg(`Saved a backup of ${n} recipes ✓`)
+    } catch {
+      setBackupMsg('Backup failed — please try again.')
+    }
+  }
+
+  async function handleRestore(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const n = await restoreBackup(file)
+      setBackupMsg(`Restored ${n} recipes ✓`)
+      const list = await getAllRecipes()
+      list.sort((a, b) => b.updatedAt - a.updatedAt)
+      setRecipes(list)
+    } catch (err) {
+      setBackupMsg(err instanceof Error ? err.message : 'Restore failed.')
+    }
+  }
 
   function selectCategory(c: MainCategory | 'All') {
     setCategory(c)
@@ -76,6 +106,7 @@ export default function Home() {
     if (!recipes) return []
     const q = query.trim().toLowerCase()
     return recipes.filter((r) => {
+      if (favOnly && !r.favorite) return false
       if (category !== 'All' && r.mainCategory !== category) return false
       if (cuisine !== 'All' && r.cuisine !== cuisine) return false
       if (!q) return true
@@ -85,19 +116,24 @@ export default function Home() {
         r.ingredients.some((i) => i.item.toLowerCase().includes(q))
       )
     })
-  }, [recipes, query, category, cuisine])
+  }, [recipes, query, category, cuisine, favOnly])
 
   const hasRecipes = recipes !== null && recipes.length > 0
-  const browsing = query.trim() === '' && category === 'All'
+  const browsing = query.trim() === '' && category === 'All' && !favOnly
 
   return (
     <div>
       <div className="page-head">
         <h1 className="page-title">My Recipes</h1>
         {hasRecipes && (
-          <Link to="/add" className="btn-primary btn-primary--sm">
-            + Add
-          </Link>
+          <div className="page-head__actions">
+            <Link to="/plan" className="btn-ghost btn-ghost--sm">
+              🗓 This week{planCount > 0 ? ` · ${planCount}` : ''}
+            </Link>
+            <Link to="/add" className="btn-primary btn-primary--sm">
+              + Add
+            </Link>
+          </div>
         )}
       </div>
 
@@ -141,6 +177,14 @@ export default function Home() {
                 {c} <span className="filter-chip__count">{categoryCounts.get(c)}</span>
               </button>
             ))}
+            <button
+              type="button"
+              className={`filter-chip filter-chip--fav${favOnly ? ' filter-chip--active' : ''}`}
+              onClick={() => setFavOnly((f) => !f)}
+              aria-pressed={favOnly}
+            >
+              ♥ Favourites
+            </button>
           </div>
 
           {subCuisines.length > 1 && (
@@ -202,6 +246,34 @@ export default function Home() {
               })}
             </ul>
           )}
+
+          <section className="card backup-card">
+            <h2 className="backup-card__title">Keep your recipes safe</h2>
+            <p className="muted backup-card__hint">
+              Recipes live on this device. Download a backup now and again — restoring it brings
+              everything back.
+            </p>
+            <div className="backup-card__actions">
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={handleBackup}>
+                ⬇︎ Back up my recipes
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm"
+                onClick={() => restoreInput.current?.click()}
+              >
+                ↩︎ Restore
+              </button>
+              <input
+                ref={restoreInput}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleRestore}
+                hidden
+              />
+            </div>
+            {backupMsg && <p className="backup-card__msg" role="status">{backupMsg}</p>}
+          </section>
         </>
       )}
     </div>
