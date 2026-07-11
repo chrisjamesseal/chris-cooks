@@ -263,7 +263,7 @@ function normalizeUrl(url: string): string {
   return trimmed
 }
 
-function detectVideoSource(url: string): 'tiktok' | 'instagram' | null {
+export function detectVideoSource(url: string): 'tiktok' | 'instagram' | null {
   const lower = url.toLowerCase()
   if (/tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com/i.test(lower)) return 'tiktok'
   if (/instagram\.com|instagr\.am/i.test(lower)) return 'instagram'
