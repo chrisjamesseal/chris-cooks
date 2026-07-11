@@ -194,6 +194,48 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   overflow: hidden;
 }
 
+/* Cook mode & step timers */
+.method-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.method-head .section-title { margin-bottom: 8px; }
+.cook-toggle {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.cook-toggle--on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.step-timer {
+  display: inline-block;
+  margin: 6px 0 4px;
+  border: 1px solid var(--line);
+  background: var(--bg, #f6f8f7);
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  margin-top: 2px;
+}
+.step-timer--running {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Video source (TikTok / Instagram) */
 .video-embed {
   width: 100%;

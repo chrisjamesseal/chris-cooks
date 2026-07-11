@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe, saveRecipe } from '../db'
 import {
@@ -41,6 +41,48 @@ function sourceHostname(url: string): string {
   }
 }
 
+// Ticked ingredients, step progress and servings survive reloads — you can
+// close the app mid-shop or mid-cook and pick up where you left off.
+const COOK_STATE_PREFIX = 'chris-cooks:cook:'
+type CookState = { have: string[]; completedThrough: number; people: number }
+
+function loadCookState(recipeId: string): CookState | null {
+  try {
+    return JSON.parse(localStorage.getItem(COOK_STATE_PREFIX + recipeId) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Pull a usable countdown out of a step's text, e.g. "simmer for 25 minutes",
+ * "bake 1 hour 10 min", "cook 6-8 min" (a range uses the longer end).
+ */
+function stepTimerSeconds(text: string): number | undefined {
+  const hr = text.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/i)
+  const min = text.match(/(?:\d+\s*(?:[-–—]|to)\s*)?(\d+)\s*(?:minutes?|mins?)\b/i)
+  const sec = text.match(/(\d+)\s*(?:seconds?|secs?)\b/i)
+  let total = 0
+  if (hr) total += parseFloat(hr[1]) * 3600
+  if (min) total += Number(min[1]) * 60
+  if (!hr && !min && sec) total += Number(sec[1])
+  return total >= 30 && total <= 6 * 3600 ? Math.round(total) : undefined
+}
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return m >= 60
+    ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`
+}
+
+function timerLabel(seconds: number): string {
+  if (seconds % 3600 === 0) return `${seconds / 3600} hr`
+  if (seconds > 3600) return `${Math.floor(seconds / 3600)} hr ${Math.round((seconds % 3600) / 60)} min`
+  return `${Math.round(seconds / 60)} min`
+}
+
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -58,14 +100,84 @@ export default function RecipeDetail() {
   const [healthResult, setHealthResult] = useState<HealthierResult | null>(null)
   const [healthError, setHealthError] = useState<string | null>(null)
   const aiOn = !!aiEndpoint()
+  // Cook mode (keep the screen awake) + one running step timer at a time.
+  const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
+  const [cookMode, setCookMode] = useState(false)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const [timer, setTimer] = useState<{ stepId: string; endsAt: number } | null>(null)
+  const [nowTick, setNowTick] = useState(() => Date.now())
 
   useEffect(() => {
     if (!id) return
     getRecipe(id).then((r) => {
       setRecipe(r ?? null)
-      if (r) setPeople(r.servings)
+      if (!r) return
+      setPeople(r.servings)
+      // Restore in the same batch as setRecipe so the save effect below never
+      // sees (and persists) the default state before the restore lands.
+      const saved = loadCookState(r.id)
+      if (saved) {
+        setHave(new Set(saved.have))
+        setCompletedThrough(saved.completedThrough ?? -1)
+        if (Number.isFinite(saved.people) && saved.people >= 1) setPeople(saved.people)
+      }
     })
   }, [id])
+
+  useEffect(() => {
+    if (!recipe) return
+    try {
+      if (have.size === 0 && completedThrough < 0 && people === recipe.servings) {
+        localStorage.removeItem(COOK_STATE_PREFIX + recipe.id)
+      } else {
+        const state: CookState = { have: [...have], completedThrough, people }
+        localStorage.setItem(COOK_STATE_PREFIX + recipe.id, JSON.stringify(state))
+      }
+    } catch {
+      // Private browsing or full storage — progress just won't persist.
+    }
+  }, [recipe, have, completedThrough, people])
+
+  useEffect(() => {
+    if (!cookMode || !wakeLockSupported) return
+    let cancelled = false
+    const acquire = async () => {
+      try {
+        const lock = await navigator.wakeLock.request('screen')
+        if (cancelled) lock.release().catch(() => {})
+        else wakeLockRef.current = lock
+      } catch {
+        // Denied (e.g. battery saver) — the toggle still shows intent.
+      }
+    }
+    acquire()
+    // The browser drops the lock whenever the tab is hidden; re-acquire on return.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') acquire()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      wakeLockRef.current?.release().catch(() => {})
+      wakeLockRef.current = null
+    }
+  }, [cookMode, wakeLockSupported])
+
+  useEffect(() => {
+    if (!timer) return
+    const iv = setInterval(() => setNowTick(Date.now()), 500)
+    return () => clearInterval(iv)
+  }, [timer])
+
+  useEffect(() => {
+    if (timer && nowTick >= timer.endsAt) {
+      setTimer(null)
+      navigator.vibrate?.([300, 150, 300])
+      flash('⏱ Timer done!')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timer, nowTick])
 
   if (recipe === undefined) return <p className="muted">Loading…</p>
   if (recipe === null) {
@@ -95,7 +207,18 @@ export default function RecipeDetail() {
   async function handleDelete() {
     if (!confirm(`Delete “${loaded.title}”?`)) return
     await deleteRecipe(loaded.id)
+    try {
+      localStorage.removeItem(COOK_STATE_PREFIX + loaded.id)
+    } catch {
+      // best-effort cleanup
+    }
     navigate('/', { replace: true })
+  }
+
+  function toggleTimer(stepId: string, seconds: number) {
+    setTimer((current) =>
+      current?.stepId === stepId ? null : { stepId, endsAt: Date.now() + seconds * 1000 },
+    )
   }
 
   // Name of the one-time Apple Shortcut that adds each line as its own reminder.
@@ -233,7 +356,14 @@ export default function RecipeDetail() {
 
       <section>
         <h2 className="section-title">Ingredients</h2>
-        <p className="scale-note">Select any items you already have to create a shopping list.</p>
+        <p className="scale-note">
+          Select any items you already have to create a shopping list.{' '}
+          {have.size > 0 && (
+            <button type="button" className="link-btn" onClick={() => setHave(new Set())}>
+              Clear ticks
+            </button>
+          )}
+        </p>
         <ul className="ingredient-list ingredient-list--check">
           {recipe.ingredients.map((ing) => {
             const has = have.has(ing.id)
@@ -296,12 +426,27 @@ export default function RecipeDetail() {
 
       {recipe.steps.length > 0 && (
         <section>
-          <h2 className="section-title">Method</h2>
+          <div className="method-head">
+            <h2 className="section-title">Method</h2>
+            {wakeLockSupported && (
+              <button
+                type="button"
+                className={`cook-toggle${cookMode ? ' cook-toggle--on' : ''}`}
+                onClick={() => setCookMode((on) => !on)}
+                aria-pressed={cookMode}
+              >
+                {cookMode ? '🔆 Screen staying on' : '🌙 Keep screen on'}
+              </button>
+            )}
+          </div>
           <p className="scale-note">Click on a step to mark it as complete.</p>
           <ol className="step-list">
             {recipe.steps.map((step, index) => {
               const used = stepPills[index]
               const done = index <= completedThrough
+              const seconds = stepTimerSeconds(step.text)
+              const running = timer?.stepId === step.id
+              const remaining = running ? Math.max(0, Math.ceil((timer.endsAt - nowTick) / 1000)) : 0
               return (
                 <li
                   key={step.id}
@@ -311,7 +456,7 @@ export default function RecipeDetail() {
                   tabIndex={0}
                   aria-pressed={done}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
                       e.preventDefault()
                       toggleStep(index)
                     }
@@ -322,6 +467,19 @@ export default function RecipeDetail() {
                     {stepParagraphs(deQuantifyStep(step.text)).map((para, i) => (
                       <p key={i}>{para}</p>
                     ))}
+                    {seconds !== undefined && (
+                      <button
+                        type="button"
+                        className={`step-timer${running ? ' step-timer--running' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleTimer(step.id, seconds)
+                        }}
+                        aria-label={running ? 'Cancel timer' : `Start ${timerLabel(seconds)} timer`}
+                      >
+                        {running ? `⏱ ${formatCountdown(remaining)} · tap to cancel` : `⏱ Start ${timerLabel(seconds)} timer`}
+                      </button>
+                    )}
                     {used.length > 0 && (
                       <div className="step-ingredients">
                         {used.map((ing) => (
