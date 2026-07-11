@@ -7,7 +7,52 @@ export function newId(): string {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-const QTY_UNIT = /^\s*([\d./]+)\s*([a-zA-Z]+)?\s+(.*)$/
+const QTY_UNIT = /^\s*([\d./¼½¾⅓⅔⅛⅜⅝⅞]+)\s*([a-zA-Z]+)?\s+(.*)$/
+
+const UNICODE_FRACTIONS: Record<string, number> = {
+  '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875,
+}
+
+/**
+ * Normalise a recipe title: strip hype openers ("THE BEST", "easiest ever"),
+ * emojis and shouting, then apply Title Case ("creamy pesto pasta" →
+ * "Creamy Pesto Pasta"). Small words stay lowercase except at the start.
+ */
+const TITLE_SMALL_WORDS = new Set([
+  'a', 'an', 'and', 'at', 'but', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with', 'without',
+])
+const TITLE_KEEP_UPPER = new Set(['bbq', 'blt'])
+const TITLE_HYPE =
+  /^(?:the\s+|my\s+|this\s+|these\s+|our\s+)?(?:absolute\s+)?(?:best(?:\s+ever)?|easiest|quickest|simplest|ultimate|perfect|amazing|incredible|unbelievable|insanely\s+good|viral|famous|legendary|epic|to\s+die\s+for|must[- ]try)\s+/i
+
+export function tidyRecipeTitle(raw: string): string {
+  let t = raw
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu, ' ')
+    .replace(/️/g, '') // variation selector left behind by stripped emoji
+    .replace(/‍/g, '') // zero-width joiner likewise
+    .replace(/!+/g, ' ')
+    .replace(/["“”]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+  let prev = ''
+  while (prev !== t) {
+    prev = t
+    t = t.replace(TITLE_HYPE, '')
+  }
+  t = t.replace(/^(?:my|this|these|our)\s+/i, '')
+  t = t.replace(/\s+(?:ever(?:\s+made)?|you(?:'|’)ll ever (?:make|eat|try|need)|you need to try)\s*$/i, '').trim()
+  if (!t) t = raw.trim()
+
+  return t
+    .toLowerCase()
+    .split(' ')
+    .map((w, i) => {
+      if (TITLE_KEEP_UPPER.has(w.replace(/[^a-z]/g, ''))) return w.toUpperCase()
+      if (i > 0 && TITLE_SMALL_WORDS.has(w)) return w
+      return w.replace(/(^|[-/])(\p{L})/gu, (_, sep: string, c: string) => sep + c.toUpperCase())
+    })
+    .join(' ')
+}
 
 /** Drop parenthetical notes and tidy spacing/punctuation from an ingredient line. */
 export function cleanIngredientLine(line: string): string {
@@ -43,13 +88,22 @@ export function parseIngredient(line: string): Ingredient {
 }
 
 function parseQuantity(text: string): number | undefined {
-  if (text.includes('/')) {
-    const [n, d] = text.split('/').map(Number)
-    if (d) return n / d
-    return undefined
+  // Peel off any unicode fraction ("1½" → 1 + 0.5, "½" → 0.5).
+  let base = 0
+  let t = text
+  for (const [glyph, value] of Object.entries(UNICODE_FRACTIONS)) {
+    if (t.includes(glyph)) {
+      base += value
+      t = t.replace(glyph, '')
+    }
   }
-  const n = Number(text)
-  return Number.isFinite(n) ? n : undefined
+  if (!t) return base || undefined
+  if (t.includes('/')) {
+    const [n, d] = t.split('/').map(Number)
+    return d ? base + n / d : base || undefined
+  }
+  const n = Number(t)
+  return Number.isFinite(n) ? base + n : base || undefined
 }
 
 export function parseSteps(text: string): Step[] {
@@ -152,10 +206,20 @@ function keywordsFor(ing: Ingredient): string[] {
     .filter((w) => w.length >= 3 && !STEP_STOPWORDS.has(w))
 }
 
+/** Singular/plural spellings of a word, so "potatoes" matches "potato" and vice versa. */
+function wordVariants(w: string): string[] {
+  const variants = new Set([w, `${w}s`])
+  if (w.endsWith('es')) variants.add(w.slice(0, -2))
+  if (w.endsWith('s') && !w.endsWith('ss')) variants.add(w.slice(0, -1))
+  if (/(o|ch|sh|ss|x|z)$/.test(w)) variants.add(`${w}es`)
+  return [...variants]
+}
+
 /**
  * Which ingredients does this step use? Honours stored `ingredientRefs` when an
  * importer set them; otherwise matches each ingredient's food words against the
- * step text. Best-effort — used to surface amounts while cooking.
+ * step text (tolerant of singular/plural). Best-effort — used to surface
+ * amounts while cooking.
  */
 export function ingredientsForStep(step: Step, ingredients: Ingredient[]): Ingredient[] {
   if (step.ingredientRefs && step.ingredientRefs.length) {
@@ -164,7 +228,9 @@ export function ingredientsForStep(step: Step, ingredients: Ingredient[]): Ingre
   }
   const text = step.text.toLowerCase()
   return ingredients.filter((ing) =>
-    keywordsFor(ing).some((w) => new RegExp(`\\b${w}\\b`).test(text)),
+    keywordsFor(ing).some((w) =>
+      wordVariants(w).some((v) => new RegExp(`\\b${v}\\b`).test(text)),
+    ),
   )
 }
 

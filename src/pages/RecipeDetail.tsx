@@ -124,13 +124,10 @@ export default function RecipeDetail() {
   const [healthResult, setHealthResult] = useState<HealthierResult | null>(null)
   const [healthError, setHealthError] = useState<string | null>(null)
   const aiOn = !!aiEndpoint()
-  // Cook mode (keep the screen awake) + one running timer at a time. When a
-  // timer finishes it rings and stays in a "done" state until dismissed, so a
-  // finished timer can't be missed. The AudioContext is created on the start
-  // tap (a user gesture) so iOS allows the alarm to play.
-  const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
-  const [cookMode, setCookMode] = useState(false)
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  // One running timer at a time. When a timer finishes it rings and stays in
+  // a "done" state until dismissed, so a finished timer can't be missed. The
+  // AudioContext is created on the start tap (a user gesture) so iOS allows
+  // the alarm to play.
   const [timer, setTimer] = useState<{ stepId: string; endsAt: number } | null>(null)
   const [timerDone, setTimerDone] = useState<string | null>(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
@@ -166,32 +163,6 @@ export default function RecipeDetail() {
       // Private browsing or full storage — progress just won't persist.
     }
   }, [recipe, have, completedThrough, people])
-
-  useEffect(() => {
-    if (!cookMode || !wakeLockSupported) return
-    let cancelled = false
-    const acquire = async () => {
-      try {
-        const lock = await navigator.wakeLock.request('screen')
-        if (cancelled) lock.release().catch(() => {})
-        else wakeLockRef.current = lock
-      } catch {
-        // Denied (e.g. battery saver) — the toggle still shows intent.
-      }
-    }
-    acquire()
-    // The browser drops the lock whenever the tab is hidden; re-acquire on return.
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') acquire()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      cancelled = true
-      document.removeEventListener('visibilitychange', onVisible)
-      wakeLockRef.current?.release().catch(() => {})
-      wakeLockRef.current = null
-    }
-  }, [cookMode, wakeLockSupported])
 
   useEffect(() => {
     if (!timer) return
@@ -362,7 +333,20 @@ export default function RecipeDetail() {
   return (
     <article className="recipe-detail">
       <Link to="/" className="back-link">← All recipes</Link>
-      {recipe.image ? (
+      {recipe.image && video ? (
+        // The thumbnail IS the video: square like every other photo, with a
+        // play badge, opening the original on TikTok/Instagram.
+        <a
+          className="recipe-hero recipe-hero--video"
+          href={video.url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Watch the video on ${video.label}`}
+        >
+          <img src={recipe.image} alt={recipe.title} />
+          <span className="recipe-hero__play" aria-hidden="true">▶</span>
+        </a>
+      ) : recipe.image ? (
         <img
           className="recipe-hero"
           src={recipe.image}
@@ -392,26 +376,11 @@ export default function RecipeDetail() {
         ))}
       </div>
 
-      {video && (
-        <section>
-          <h2 className="section-title">Watch the video</h2>
-          {video.embedUrl ? (
-            <div className="video-embed">
-              <iframe
-                src={video.embedUrl}
-                title={`${video.label} video for ${recipe.title}`}
-                allow="encrypted-media; picture-in-picture; fullscreen"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <p className="scale-note">This {video.label} link can't be played here, but it opens in the app.</p>
-          )}
-          <a className="video-link card" href={video.url} target="_blank" rel="noreferrer">
-            {video.platform === 'tiktok' ? '🎵' : '📸'} Open on {video.label}
-            <span className="video-link__arrow" aria-hidden="true">↗</span>
-          </a>
-        </section>
+      {video && !recipe.image && (
+        <a className="video-link card" href={video.url} target="_blank" rel="noreferrer">
+          {video.platform === 'tiktok' ? '🎵' : '📸'} Watch the video on {video.label}
+          <span className="video-link__arrow" aria-hidden="true">↗</span>
+        </a>
       )}
 
       <section>
@@ -486,19 +455,7 @@ export default function RecipeDetail() {
 
       {recipe.steps.length > 0 && (
         <section>
-          <div className="method-head">
-            <h2 className="section-title">Method</h2>
-            {wakeLockSupported && (
-              <button
-                type="button"
-                className={`cook-toggle${cookMode ? ' cook-toggle--on' : ''}`}
-                onClick={() => setCookMode((on) => !on)}
-                aria-pressed={cookMode}
-              >
-                {cookMode ? '🔆 Screen staying on' : '🌙 Keep screen on'}
-              </button>
-            )}
-          </div>
+          <h2 className="section-title">Method</h2>
           <div className="quick-timer">
             <span className="quick-timer__label">⏱ Quick timer</span>
             {timer?.stepId === QUICK_TIMER || timerDone === QUICK_TIMER ? (
