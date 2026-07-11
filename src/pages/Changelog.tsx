@@ -4,6 +4,18 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.2.0',
+    title: 'Shopping list polish & editable sources',
+    notes: [
+      'The shopping button now says “Add to Shopping List” with a little Reminders icon.',
+      'Edit a recipe to see, add or change its source link — including swapping in the TikTok/Instagram video link.',
+      'Prep and cook times: just type the number of minutes (other formats like “1 hr 20 min” still work).',
+      'Video thumbnails now show a subtle “Press to play” label instead of a big play button.',
+      'Removed the quick-timer row — steps that mention a time still get their own one-tap timer.',
+      'A little more breathing room between Nutrition and the healthier tips.',
+    ],
+  },
+  {
     version: '1.1.0',
     title: 'Tidier titles, tap-to-watch videos & sturdier saving',
     notes: [

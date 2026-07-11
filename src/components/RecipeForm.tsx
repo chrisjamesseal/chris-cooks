@@ -101,14 +101,27 @@ function nutritionDraft(nutrition?: Nutrition): NutritionDraft {
   return draft
 }
 
+/** "25 min" shows as just "25" in the form; anything else ("1 hr 10 min") stays as-is. */
+function timeToDraft(value?: string): string {
+  const m = value?.match(/^(\d+)\s*min(s|utes)?$/i)
+  return m ? m[1] : (value ?? '')
+}
+
+/** A bare number means minutes; other formats are kept as typed. */
+function draftToTime(value: string): string | undefined {
+  const t = value.trim()
+  if (!t) return undefined
+  return /^\d+$/.test(t) ? `${t} min` : t
+}
+
 function draftFromRecipe(recipe?: Recipe): RecipeDraft {
   return {
     title: recipe?.title ?? '',
     mainCategory: recipe?.mainCategory ?? 'Dinner',
     cuisine: recipe?.cuisine ?? '',
     servings: recipe ? String(recipe.servings) : '2',
-    prep: recipe?.times.prep ?? '',
-    cook: recipe?.times.cook ?? '',
+    prep: timeToDraft(recipe?.times.prep),
+    cook: timeToDraft(recipe?.times.cook),
     sourceUrl: recipe?.source?.url ?? '',
     image: recipe?.image ?? '',
     ingredients: recipe?.ingredients.map((i) => i.raw).join('\n') ?? '',
@@ -205,8 +218,8 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       cuisine: draft.cuisine.trim() || undefined,
       servings: Math.max(1, Number(draft.servings) || 1),
       times: {
-        prep: draft.prep.trim() || undefined,
-        cook: draft.cook.trim() || undefined,
+        prep: draftToTime(draft.prep),
+        cook: draftToTime(draft.cook),
       },
       source: sourceUrl ? { type: detectVideoSource(sourceUrl) ?? 'url', url: sourceUrl } : { type: 'manual' },
       ingredients,
@@ -266,21 +279,23 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
 
       <div className="field-row">
         <label className="field">
-          <span className="field__label">Prep time</span>
+          <span className="field__label">Prep time <span className="field__hint">mins</span></span>
           <input
             className="field__input"
+            inputMode="numeric"
             value={draft.prep}
             onChange={(e) => set('prep', e.target.value)}
-            placeholder="10 min"
+            placeholder="10"
           />
         </label>
         <label className="field">
-          <span className="field__label">Cook time</span>
+          <span className="field__label">Cook time <span className="field__hint">mins</span></span>
           <input
             className="field__input"
+            inputMode="numeric"
             value={draft.cook}
             onChange={(e) => set('cook', e.target.value)}
-            placeholder="25 min"
+            placeholder="25"
           />
         </label>
       </div>
@@ -292,6 +307,18 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
           value={draft.cuisine}
           onChange={(e) => set('cuisine', e.target.value)}
           placeholder="Italian"
+        />
+      </label>
+
+      <label className="field">
+        <span className="field__label">Source link <span className="field__hint">optional — recipe page or video</span></span>
+        <input
+          className="field__input"
+          type="url"
+          inputMode="url"
+          value={draft.sourceUrl}
+          onChange={(e) => set('sourceUrl', e.target.value)}
+          placeholder="https://www.instagram.com/reel/…"
         />
       </label>
 

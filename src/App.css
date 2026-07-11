@@ -222,15 +222,17 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 @keyframes timer-done-pulse {
   50% { opacity: 0.65; }
 }
-.quick-timer {
+.btn-reminders {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+  justify-content: center;
+  gap: 9px;
 }
-.quick-timer__label { font-size: 13px; font-weight: 600; color: var(--muted); }
-.quick-timer .step-timer { margin: 0; }
+.reminders-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
 
 /* Video source (TikTok / Instagram) */
 .recipe-hero--video {
@@ -244,24 +246,20 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   object-fit: cover;
   display: block;
 }
-.recipe-hero__play {
+.recipe-hero__cta {
   position: absolute;
-  top: 50%;
+  bottom: 10px;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-left: 5px; /* optically centre the triangle */
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
-.recipe-hero--video:active .recipe-hero__play { transform: translate(-50%, -50%) scale(0.94); }
+.recipe-hero--video:active .recipe-hero__cta { opacity: 0.8; }
 .video-link {
   margin-bottom: 16px;
   display: flex;
@@ -345,7 +343,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .chip--cuisine { text-transform: capitalize; }
 
 /* Make it healthier */
-.healthier { padding: 14px 16px 16px; overflow: hidden; margin-bottom: 20px; }
+.healthier { padding: 14px 16px 16px; overflow: hidden; margin: 18px 0 20px; }
 .healthier__title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
 .health-tips {
   list-style: none;

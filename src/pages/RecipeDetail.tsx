@@ -105,8 +105,20 @@ function ringAlarm(ctx: AudioContext | null) {
   }
 }
 
-/** Id used for the quick timer in the Method header (not tied to a step). */
-const QUICK_TIMER = '__quick__'
+/** Miniature Apple-Reminders-style glyph for the shopping list button. */
+function RemindersIcon() {
+  return (
+    <svg className="reminders-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1" y="1" width="22" height="22" rx="5.5" fill="#fff" />
+      <circle cx="6.2" cy="7" r="1.9" fill="#ff9500" />
+      <rect x="10" y="5.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
+      <circle cx="6.2" cy="12" r="1.9" fill="#007aff" />
+      <rect x="10" y="10.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
+      <circle cx="6.2" cy="17" r="1.9" fill="#34c759" />
+      <rect x="10" y="15.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
+    </svg>
+  )
+}
 
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -334,8 +346,9 @@ export default function RecipeDetail() {
     <article className="recipe-detail">
       <Link to="/" className="back-link">← All recipes</Link>
       {recipe.image && video ? (
-        // The thumbnail IS the video: square like every other photo, with a
-        // play badge, opening the original on TikTok/Instagram.
+        // The thumbnail IS the video: square like every other photo, opening
+        // the original on TikTok/Instagram. The cover art usually carries the
+        // platform's own play glyph, so just a small label at the bottom.
         <a
           className="recipe-hero recipe-hero--video"
           href={video.url}
@@ -344,7 +357,7 @@ export default function RecipeDetail() {
           aria-label={`Watch the video on ${video.label}`}
         >
           <img src={recipe.image} alt={recipe.title} />
-          <span className="recipe-hero__play" aria-hidden="true">▶</span>
+          <span className="recipe-hero__cta">▶ Press to play on {video.label}</span>
         </a>
       ) : recipe.image ? (
         <img
@@ -444,11 +457,17 @@ export default function RecipeDetail() {
         <div className="shopping-actions">
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary btn-reminders"
             onClick={sendToReminders}
             disabled={remainingCount === 0}
           >
-            {remainingCount === 0 ? 'Got everything ✓' : `Add ${remainingCount} to Reminders`}
+            {remainingCount === 0 ? (
+              'Got everything ✓'
+            ) : (
+              <>
+                <RemindersIcon /> Add {remainingCount} to Shopping List
+              </>
+            )}
           </button>
         </div>
       </section>
@@ -456,23 +475,6 @@ export default function RecipeDetail() {
       {recipe.steps.length > 0 && (
         <section>
           <h2 className="section-title">Method</h2>
-          <div className="quick-timer">
-            <span className="quick-timer__label">⏱ Quick timer</span>
-            {timer?.stepId === QUICK_TIMER || timerDone === QUICK_TIMER ? (
-              timerChip(QUICK_TIMER, 0, '')
-            ) : (
-              [5, 10, 15].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="step-timer"
-                  onClick={() => toggleTimer(QUICK_TIMER, m * 60)}
-                >
-                  {m} min
-                </button>
-              ))
-            )}
-          </div>
           <p className="scale-note">Click on a step to mark it as complete.</p>
           <ol className="step-list">
             {recipe.steps.map((step, index) => {
