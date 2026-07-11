@@ -7,6 +7,22 @@ import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
 
+/** Square thumbnail: the recipe's own photo, or a category-coloured emoji placeholder. */
+function Thumb({ recipe, className }: { recipe: Recipe; className: string }) {
+  if (recipe.image) {
+    return <img className={className} src={recipe.image} alt="" loading="lazy" />
+  }
+  return (
+    <span
+      className={`${className} ${className}--ph`}
+      style={{ background: placeholderGradient(recipe.mainCategory) }}
+      aria-hidden="true"
+    >
+      <FoodIcon emoji={placeholderEmoji(recipe.title, recipe.mainCategory)} />
+    </span>
+  )
+}
+
 export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null)
   const [query, setQuery] = useState('')
@@ -26,6 +42,19 @@ export default function Home() {
     setCategory(c)
     setCuisine('All') // reset the sub-filter whenever the category changes
   }
+
+  // Chips reflect the actual collection: only categories with recipes, with counts.
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<MainCategory, number>()
+    for (const r of recipes ?? []) counts.set(r.mainCategory, (counts.get(r.mainCategory) ?? 0) + 1)
+    return counts
+  }, [recipes])
+
+  // Newest additions surface at the top and refresh automatically as recipes are added.
+  const recentlyAdded = useMemo(() => {
+    if (!recipes || recipes.length < 5) return []
+    return [...recipes].sort((a, b) => b.createdAt - a.createdAt).slice(0, 6)
+  }, [recipes])
 
   // Cuisines within the selected category that have at least two recipes, so the
   // sub-filter stays a tidy handful rather than a wall of one-off tags.
@@ -59,6 +88,7 @@ export default function Home() {
   }, [recipes, query, category, cuisine])
 
   const hasRecipes = recipes !== null && recipes.length > 0
+  const browsing = query.trim() === '' && category === 'All'
 
   return (
     <div>
@@ -101,14 +131,14 @@ export default function Home() {
             >
               All
             </button>
-            {CATEGORIES.map((c) => (
+            {CATEGORIES.filter((c) => (categoryCounts.get(c) ?? 0) > 0).map((c) => (
               <button
                 key={c}
                 type="button"
                 className={`filter-chip${category === c ? ' filter-chip--active' : ''}`}
                 onClick={() => selectCategory(c)}
               >
-                {c}
+                {c} <span className="filter-chip__count">{categoryCounts.get(c)}</span>
               </button>
             ))}
           </div>
@@ -135,27 +165,41 @@ export default function Home() {
             </div>
           )}
 
+          {browsing && recentlyAdded.length > 0 && (
+            <section className="recent">
+              <h2 className="section-title">Recently added</h2>
+              <div className="recent-strip">
+                {recentlyAdded.map((recipe) => (
+                  <Link to={`/recipe/${recipe.id}`} className="recent-card" key={recipe.id}>
+                    <Thumb recipe={recipe} className="recent-card__thumb" />
+                    <span className="recent-card__title">{recipe.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
           {filtered.length === 0 ? (
             <p className="muted">No recipes match your search.</p>
           ) : (
             <ul className="recipe-list">
-              {filtered.map((recipe) => (
-                <li key={recipe.id}>
-                  <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
-                    <span
-                      className="recipe-card__thumb recipe-card__thumb--ph"
-                      style={{ background: placeholderGradient(recipe.mainCategory) }}
-                      aria-hidden="true"
-                    >
-                      <FoodIcon emoji={placeholderEmoji(recipe.title, recipe.mainCategory)} />
-                    </span>
-                    <span className="recipe-card__body">
-                      <span className="recipe-card__title">{recipe.title}</span>
-                      <span className="recipe-card__meta">{recipe.cuisine || recipe.mainCategory}</span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {filtered.map((recipe) => {
+                const meta = [
+                  recipe.cuisine || recipe.mainCategory,
+                  recipe.times.cook || recipe.times.total,
+                ].filter(Boolean)
+                return (
+                  <li key={recipe.id}>
+                    <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
+                      <Thumb recipe={recipe} className="recipe-card__thumb" />
+                      <span className="recipe-card__body">
+                        <span className="recipe-card__title">{recipe.title}</span>
+                        <span className="recipe-card__meta">{meta.join(' · ')}</span>
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </>

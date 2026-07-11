@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import type { MainCategory, Nutrition, Recipe, Step } from '../types'
 import { ingredientsFromText, newId } from '../lib/recipe'
+import { detectVideoSource } from '../lib/import'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
 
@@ -207,7 +208,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
         prep: draft.prep.trim() || undefined,
         cook: draft.cook.trim() || undefined,
       },
-      source: sourceUrl ? { type: 'url', url: sourceUrl } : { type: 'manual' },
+      source: sourceUrl ? { type: detectVideoSource(sourceUrl) ?? 'url', url: sourceUrl } : { type: 'manual' },
       ingredients,
       steps,
       nutrition: buildNutrition(draft.nutrition),

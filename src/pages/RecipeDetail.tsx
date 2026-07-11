@@ -17,6 +17,7 @@ import {
   type HealthPriority,
 } from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
+import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
@@ -31,6 +32,14 @@ const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = 
   { key: 'sodiumMg', label: 'Sodium', unit: 'mg' },
   { key: 'cholesterolMg', label: 'Cholesterol', unit: 'mg' },
 ]
+
+function sourceHostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
 
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -154,6 +163,8 @@ export default function RecipeDetail() {
     ? NUTRITION_ROWS.filter(({ key }) => recipe.nutrition![key] !== undefined)
     : []
 
+  const video = videoInfoFromUrl(recipe.source?.url)
+
   // Each ingredient appears as a pill only once across the method (its first
   // use) so an ingredient touched in several steps isn't doubled up.
   const shownPills = new Set<string>()
@@ -197,6 +208,28 @@ export default function RecipeDetail() {
           <span className="chip" key={t as string}>{t}</span>
         ))}
       </div>
+
+      {video && (
+        <section>
+          <h2 className="section-title">Watch the video</h2>
+          {video.embedUrl ? (
+            <div className="video-embed">
+              <iframe
+                src={video.embedUrl}
+                title={`${video.label} video for ${recipe.title}`}
+                allow="encrypted-media; picture-in-picture; fullscreen"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <p className="scale-note">This {video.label} link can't be played here, but it opens in the app.</p>
+          )}
+          <a className="video-link card" href={video.url} target="_blank" rel="noreferrer">
+            {video.platform === 'tiktok' ? '🎵' : '📸'} Open on {video.label}
+            <span className="video-link__arrow" aria-hidden="true">↗</span>
+          </a>
+        </section>
+      )}
 
       <section>
         <h2 className="section-title">Ingredients</h2>
@@ -306,14 +339,16 @@ export default function RecipeDetail() {
         </section>
       )}
 
-      {nutritionRows.length > 0 && (
-        <section>
-          <h2 className="section-title">
-            Nutrition{' '}
+      <section>
+        <h2 className="section-title">
+          Nutrition{' '}
+          {nutritionRows.length > 0 && (
             <span className="section-title__hint">
               per serving{recipe.nutrition?.servingSizeG ? ` (${recipe.nutrition.servingSizeG}g)` : ''}
             </span>
-          </h2>
+          )}
+        </h2>
+        {nutritionRows.length > 0 ? (
           <dl className="nutrition-table">
             {nutritionRows.map(({ key, label, unit }) => (
               <div className="nutrition-row" key={key}>
@@ -325,8 +360,13 @@ export default function RecipeDetail() {
               </div>
             ))}
           </dl>
+        ) : (
+          <p className="scale-note">
+            No nutrition info yet — you can add it via <Link to={`/recipe/${recipe.id}/edit`}>Edit</Link>.
+          </p>
+        )}
 
-          <div className="healthier card healthier--nutrition">
+        <div className="healthier card healthier--nutrition">
             <button
               type="button"
               className="healthier__head"
@@ -398,14 +438,13 @@ export default function RecipeDetail() {
               </div>
             )}
           </div>
-        </section>
-      )}
+      </section>
 
-      {recipe.source?.url && (
+      {recipe.source?.url && !video && (
         <p className="muted">
           Source:{' '}
           <a href={recipe.source.url} target="_blank" rel="noreferrer">
-            {recipe.source.url}
+            {sourceHostname(recipe.source.url)}
           </a>
         </p>
       )}
