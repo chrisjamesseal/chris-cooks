@@ -326,6 +326,46 @@ function unescapeCaption(text: string): string {
   return text.replace(/\\r\\n|\\n|\\r/g, '\n').replace(/\\"/g, '"')
 }
 
+function extractOgImage(html: string): string | undefined {
+  const m =
+    html.match(/<meta[^>]*property=["']og:image(?::secure_url)?["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image(?::secure_url)?["']/i)
+  return m ? cleanText(m[1]) || undefined : undefined
+}
+
+/**
+ * TikTok/Instagram cover-image URLs are signed and expire within days, so a
+ * hotlink would go blank. Instead the image is fetched at import time (via the
+ * CORS proxies when needed) and stored as a compact JPEG data URL.
+ */
+async function fetchImageAsDataUrl(url: string): Promise<string | undefined> {
+  for (const attempt of [url, ...PROXIES.map((p) => p(url))]) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 12000)
+    try {
+      const res = await fetch(attempt, { signal: controller.signal })
+      if (!res.ok) continue
+      const blob = await res.blob()
+      if (!blob.type.startsWith('image/')) continue
+      const bitmap = await createImageBitmap(blob)
+      const max = 900
+      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(bitmap.width * scale)
+      canvas.height = Math.round(bitmap.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return undefined
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      return canvas.toDataURL('image/jpeg', 0.8)
+    } catch {
+      // decode/network failure — try the next route
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  return undefined
+}
+
 /**
  * Instagram/Facebook's og:description wraps the real caption in a stats
  * preamble, e.g. `8,633 Likes, 48 Comments - someuser on May 28, 2026: "…"`.
@@ -465,6 +505,8 @@ export async function importRecipeFromUrl(url: string): Promise<Recipe> {
       }
       const recipe = parseVideoRecipe(html, target, videoSource)
       if (recipe && (recipe.ingredients.length > 0 || recipe.steps.length > 0)) {
+        const cover = extractOgImage(html)
+        if (cover) recipe.image = await fetchImageAsDataUrl(cover)
         return aiCleanup(recipe)
       }
     }
