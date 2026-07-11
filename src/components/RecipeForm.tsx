@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import type { MainCategory, Nutrition, Recipe, Step } from '../types'
-import { ingredientsFromText, newId } from '../lib/recipe'
+import { ingredientsFromText, newId, tidyRecipeTitle } from '../lib/recipe'
 import { detectVideoSource } from '../lib/import'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
@@ -173,7 +173,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const title = draft.title.trim()
+    const title = tidyRecipeTitle(draft.title.trim())
     if (!title) {
       setError('Please give your recipe a title.')
       return

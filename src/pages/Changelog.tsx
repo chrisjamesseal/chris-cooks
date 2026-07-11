@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.1.0',
+    title: 'Tidier titles, tap-to-watch videos & sturdier saving',
+    notes: [
+      'Video recipes: the photo is now the video — tap the thumbnail (with its play button) to open the original on TikTok or Instagram.',
+      'Recipe names tidied everywhere: hype like “THE BEST creamy pesto pasta” becomes “Creamy Pesto Pasta”, and every title is neatly capitalised.',
+      'Steps now show ingredient amounts more reliably — fixed missing matches for plurals (potato/potatoes) and fraction quantities like ½ tsp.',
+      'Sturdier saving: the app now asks the browser to keep its storage permanently. If recipes have vanished before, that was the browser clearing site data after a week away — adding the app to your Home Screen (Share → Add to Home Screen) prevents it completely.',
+      'Removed the “keep screen on” switch.',
+    ],
+  },
+  {
     version: '1.0.0',
     title: 'TikTok & Instagram imports, timers and smarter cooking',
     notes: [

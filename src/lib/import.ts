@@ -1,5 +1,5 @@
 import type { Ingredient, MainCategory, Nutrition, Recipe, Step } from '../types'
-import { newId, parseIngredient } from './recipe'
+import { newId, parseIngredient, tidyRecipeTitle } from './recipe'
 
 /**
  * Recipe import: fetch a page and pull structured recipe data out of its
@@ -69,7 +69,7 @@ export function tidyTitle(raw: string): string {
 
 function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
   const now = Date.now()
-  const title = tidyTitle(cleanText(firstString(node.name)) || 'Imported recipe')
+  const title = tidyRecipeTitle(tidyTitle(cleanText(firstString(node.name)) || 'Imported recipe'))
   const ingredients = ingredientLines(node.recipeIngredient)
     .map((line) => cleanText(line))
     .filter(Boolean)
@@ -496,10 +496,11 @@ function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' 
   return {
     id: newId(),
     schemaVersion: 1,
-    title:
+    title: tidyRecipeTitle(
       title ||
-      titleFromIngredients(parsedIngredients) ||
-      (username ? `Recipe by @${username}` : `Imported ${sourceType} recipe`),
+        titleFromIngredients(parsedIngredients) ||
+        (username ? `Recipe by @${username}` : `Imported ${sourceType} recipe`),
+    ),
     source: { type: sourceType, url: sourceUrl },
     mainCategory: 'Dinner',
     servings: 1,
@@ -554,7 +555,7 @@ async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): P
     return {
       id: newId(),
       schemaVersion: 1,
-      title: tidyTitle(cleanText(String(data.title))),
+      title: tidyRecipeTitle(tidyTitle(cleanText(String(data.title)))),
       image:
         typeof data.image === 'string' && data.image.startsWith('data:image/') ? data.image : undefined,
       source: { type: sourceType, url },
