@@ -4,6 +4,20 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.0.0',
+    title: 'TikTok & Instagram imports, timers and smarter cooking',
+    notes: [
+      'Import recipes straight from TikTok and Instagram — paste the link and we pull in the dish, ingredients, photo and video.',
+      'Watch the original video right on the recipe page, or open it in the app with one tap.',
+      'Kitchen timers: steps that mention a time get a one-tap countdown, plus quick 5/10/15-minute timers on every recipe — with a proper alarm that keeps ringing on screen until you dismiss it.',
+      '“Keep screen on” switch in the Method section so your phone doesn’t sleep mid-recipe.',
+      'Your progress sticks: ticked ingredients, completed steps and servings are remembered per recipe, even if you close the app mid-shop or mid-cook.',
+      'Healthier eating built in: every recipe now shows instant ingredient-swap tips under Nutrition — no setup needed.',
+      'Home screen refresh: real photos on recipe cards, a “Recently added” row that updates as you add recipes, category counts, and cook times at a glance.',
+      'Optional AI upgrade: deploy the small worker in /worker and video imports get a proper dish name, a written method and the photo read straight from the video — plus a one-tap “rewrite this recipe to be healthier”. See worker/README.md.',
+    ],
+  },
+  {
     version: '0.9.0',
     title: 'Crisper food icons',
     notes: [
