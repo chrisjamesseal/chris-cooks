@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ensureSeeded, getAllRecipes } from '../db'
 import { downloadBackup, restoreBackup } from '../lib/backup'
-import { getPlan } from '../lib/plan'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
-import { CalendarIcon, HeartIcon } from '../components/icons'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
@@ -72,9 +70,9 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
   const [cuisine, setCuisine] = useState<string>('All')
-  const [favOnly, setFavOnly] = useState(false)
-  const [proteinOnly, setProteinOnly] = useState(false)
-  const [planCount] = useState(() => getPlan().length)
+  const [params] = useSearchParams()
+  const favOnly = params.get('fav') === '1'
+  const proteinOnly = params.get('protein') === '1'
   const [backupMsg, setBackupMsg] = useState<string | null>(null)
   const restoreInput = useRef<HTMLInputElement>(null)
   const period = useMemo(currentMealPeriod, [])
@@ -126,8 +124,6 @@ export default function Home() {
     ]
     return ordered.filter((c) => present.has(c))
   }, [recipes, period])
-
-  const anyHighProtein = useMemo(() => (recipes ?? []).some(isHighProtein), [recipes])
 
   // Time-of-day ideas: favourites first, then a daily rotation of the rest.
   const ideas = useMemo(() => {
@@ -183,30 +179,6 @@ export default function Home() {
 
   return (
     <div>
-      <div className="page-head">
-        <h1 className="page-title page-title--head">My Recipes</h1>
-        {hasRecipes && (
-          <div className="page-head__actions">
-            <button
-              type="button"
-              className={`btn-ghost btn-ghost--sm fav-btn${favOnly ? ' fav-btn--on' : ''}`}
-              onClick={() => setFavOnly((f) => !f)}
-              aria-pressed={favOnly}
-              aria-label="Favourites"
-            >
-              <HeartIcon />
-            </button>
-            <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="This Week">
-              <CalendarIcon />
-              {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
-            </Link>
-            <Link to="/add" className="btn-primary btn-primary--sm">
-              + Add
-            </Link>
-          </div>
-        )}
-      </div>
-
       {recipes === null && <p className="muted">Loading…</p>}
 
       {recipes !== null && recipes.length === 0 && (
@@ -253,20 +225,9 @@ export default function Home() {
             ))}
           </div>
 
-          {(anyHighProtein || subCuisines.length > 1) && (
+          {subCuisines.length > 1 && (
             <div className="filter-chips filter-chips--sub">
-              {anyHighProtein && (
-                <button
-                  type="button"
-                  className={`filter-chip filter-chip--sm${proteinOnly ? ' filter-chip--active' : ''}`}
-                  onClick={() => setProteinOnly((p) => !p)}
-                  aria-pressed={proteinOnly}
-                >
-                  💪 High Protein
-                </button>
-              )}
-              {subCuisines.length > 1 &&
-                subCuisines.map((c) => (
+              {subCuisines.map((c) => (
                   <button
                     key={c}
                     type="button"
@@ -293,6 +254,8 @@ export default function Home() {
             </section>
           )}
 
+          {browsing && <h2 className="section-title">All Recipes</h2>}
+
           {filtered.length === 0 ? (
             <p className="muted">No recipes match your search.</p>
           ) : (
@@ -303,12 +266,14 @@ export default function Home() {
                   <li key={recipe.id}>
                     <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
                       <Thumb recipe={recipe} className="recipe-card__thumb" />
-                      <span className="recipe-card__body">
-                        <span className="recipe-card__title">
-                          {recipe.title}
-                          {isHighProtein(recipe) && <span className="card-protein" title="High Protein"> 💪</span>}
-                          {recipe.favorite && <HeartIcon className="heart-icon card-heart" />}
+                      {(recipe.favorite || isHighProtein(recipe)) && (
+                        <span className="recipe-card__badges" aria-hidden="true">
+                          {isHighProtein(recipe) && '💪'}
+                          {recipe.favorite && '❤️'}
                         </span>
+                      )}
+                      <span className="recipe-card__body">
+                        <span className="recipe-card__title">{recipe.title}</span>
                         <span className="recipe-card__meta">
                           {recipe.mainCategory}
                           {score > 0 && (

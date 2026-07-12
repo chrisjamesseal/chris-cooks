@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.4.1',
+    title: 'One header to rule them all',
+    notes: [
+      'The green bar is gone: "My Recipes" is now the app header, it stays pinned while you scroll, and the version number sits next to it (still opens this page).',
+      'The ❤️ and 💪 buttons live in the header on every page, one tap from anywhere shows your favourites or high-protein recipes.',
+      'Favourite and protein markers on recipe cards are now neat corner emojis, and an "All Recipes" heading separates the list from the ideas row.',
+      'Cuisine filters now look clearly different from the main categories.',
+      'The Add button is now simply ＋.',
+    ],
+  },
+  {
     version: '1.4.0',
     title: 'Smarter home, proper categories & fridge search',
     notes: [
