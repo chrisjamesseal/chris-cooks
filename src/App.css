@@ -38,9 +38,6 @@
   justify-content: center;
 }
 .app-head__actions > *:active { transform: scale(0.92); }
-.emoji-btn { font-size: 16px; line-height: 1; }
-.emoji-btn--fav { background: #fdeaed; border-color: #d7263d; }
-.emoji-btn--protein { background: #e7f5ee; border-color: var(--green); }
 .app-head__add { font-size: 18px; line-height: 1; }
 
 .app-main {
@@ -161,6 +158,11 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .filter-chip--active {
   background: var(--green);
   border-color: var(--green);
+  color: #fff;
+}
+.filter-chip--fav-active {
+  background: #d7263d;
+  border-color: #d7263d;
   color: #fff;
 }
 .filter-chips--sub {

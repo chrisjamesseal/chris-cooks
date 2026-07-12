@@ -70,9 +70,16 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
   const [cuisine, setCuisine] = useState<string>('All')
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const favOnly = params.get('fav') === '1'
   const proteinOnly = params.get('protein') === '1'
+
+  function toggleFavOnly() {
+    const next = new URLSearchParams(params)
+    if (favOnly) next.delete('fav')
+    else next.set('fav', '1')
+    setParams(next, { replace: true })
+  }
   const [backupMsg, setBackupMsg] = useState<string | null>(null)
   const restoreInput = useRef<HTMLInputElement>(null)
   const period = useMemo(currentMealPeriod, [])
@@ -209,6 +216,14 @@ export default function Home() {
           )}
 
           <div className="filter-chips">
+            <button
+              type="button"
+              className={`filter-chip filter-chip--fav${favOnly ? ' filter-chip--fav-active' : ''}`}
+              onClick={toggleFavOnly}
+              aria-pressed={favOnly}
+            >
+              ❤️ Favourites
+            </button>
             <button
               type="button"
               className={`filter-chip${category === 'All' ? ' filter-chip--active' : ''}`}
