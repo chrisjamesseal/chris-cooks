@@ -29,22 +29,19 @@
 .app-head__version:active { opacity: 0.6; }
 
 .app-head__actions { display: flex; gap: 6px; align-items: center; }
-.emoji-btn {
+.app-head__actions > * {
+  width: 42px;
+  height: 36px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  padding: 8px 0;
-  font-size: 16px;
-  line-height: 1;
 }
+.app-head__actions > *:active { transform: scale(0.92); }
+.emoji-btn { font-size: 16px; line-height: 1; }
 .emoji-btn--fav { background: #fdeaed; border-color: #d7263d; }
 .emoji-btn--protein { background: #e7f5ee; border-color: var(--green); }
-.app-head__add {
-  font-size: 18px;
-  line-height: 1;
-  padding: 8px 13px;
-}
+.app-head__add { font-size: 18px; line-height: 1; }
 
 .app-main {
   flex: 1;
@@ -71,7 +68,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 16px;
 }
+.page-head .page-title { margin-bottom: 0; }
 .back-link {
   display: inline-block;
   font-size: 14px;
@@ -124,6 +123,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   padding: 6px 14px;
   border-radius: 999px;
 }
+.filter-chip:active { transform: scale(0.96); }
 .filter-chip--active {
   background: var(--green);
   border-color: var(--green);
@@ -276,10 +276,6 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .page-head__actions { display: flex; gap: 8px; align-items: center; }
 .week-btn {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 12px;
   color: var(--green-dark);
 }
 .calendar-icon { width: 20px; height: 20px; display: block; }
@@ -350,6 +346,8 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .notes-edit { display: grid; gap: 10px; }
 .btn-notes { width: 100%; }
 
+.link-btn.link-btn--danger { color: #b3261e; }
+
 /* This week plan */
 .plan-item { position: relative; }
 .plan-item .recipe-card { padding-right: 44px; }
@@ -369,6 +367,14 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   padding: 0;
 }
 .plan-item__remove:active { color: var(--ink); }
+
+.plan-shop { margin-bottom: 14px; }
+.plan-shop__meal {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 12px 0 6px;
+}
 
 /* Backup card */
 .backup-card { margin-top: 28px; display: grid; gap: 10px; }

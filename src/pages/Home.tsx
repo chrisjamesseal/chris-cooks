@@ -111,19 +111,22 @@ export default function Home() {
   }
 
   function selectCategory(c: MainCategory | 'All') {
-    setCategory(c)
+    // Tapping the active category again returns to All.
+    setCategory((current) => (current === c ? 'All' : c))
     setCuisine('All') // reset the sub-filter whenever the category changes
   }
 
   // Categories that actually have recipes, with the time-relevant one first.
+  // Once a category is picked, only it (and All) stay visible until deselected.
   const visibleCategories = useMemo(() => {
+    if (category !== 'All') return [category]
     const present = new Set((recipes ?? []).map((r) => r.mainCategory))
     const ordered: MainCategory[] = [
       period.category,
       ...CATEGORIES.filter((c) => c !== period.category),
     ]
     return ordered.filter((c) => present.has(c))
-  }, [recipes, period])
+  }, [recipes, period, category])
 
   // Time-of-day ideas: favourites first, then a daily rotation of the rest.
   const ideas = useMemo(() => {
@@ -145,7 +148,7 @@ export default function Home() {
       }
     }
     return [...counts.entries()]
-      .filter(([, n]) => n >= 2)
+      .filter(([c, n]) => n >= 2 && !c.includes('/') && !c.includes('http'))
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([c]) => c)
   }, [recipes, category])
@@ -197,7 +200,7 @@ export default function Home() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search recipes, or list fridge items with commas"
+            placeholder="Search, or list fridge items…"
             aria-label="Search recipes"
           />
           {terms.length > 0 && (
@@ -212,14 +215,14 @@ export default function Home() {
             >
               All
             </button>
-            {visibleCategories.map((c, i) => (
+            {visibleCategories.map((c) => (
               <button
                 key={c}
                 type="button"
                 className={`filter-chip${category === c ? ' filter-chip--active' : ''}`}
                 onClick={() => selectCategory(c)}
               >
-                {i === 0 ? '🕒 ' : ''}
+                {c === period.category && category === 'All' ? '🕒 ' : ''}
                 {CATEGORY_LABEL[c]}
               </button>
             ))}

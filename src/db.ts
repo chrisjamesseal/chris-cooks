@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { parseIngredient, tidyRecipeTitle } from './lib/recipe'
+import { dessertCategoryOverride, parseIngredient, tidyCuisine, tidyRecipeTitle } from './lib/recipe'
 import type { Recipe } from './types'
 
 /**
@@ -49,7 +49,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '5'
+const SEED_VERSION = '6'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 const SEED_PREFIX = 'seed-'
 
@@ -94,7 +94,7 @@ async function seedIfNeeded(): Promise<void> {
 }
 
 // Bump to re-run the cleanup over already-stored recipes.
-const TIDY_VERSION = '2'
+const TIDY_VERSION = '3'
 const TIDY_FLAG = 'chris-cooks:recipeTidyVersion'
 
 /**
@@ -113,6 +113,13 @@ async function tidyStoredRecipes(): Promise<void> {
       let changed = false
       const title = tidyRecipeTitle(recipe.title)
       if (title && title !== recipe.title) changed = true
+      let mainCategory = recipe.mainCategory
+      if (mainCategory !== 'Dessert' && dessertCategoryOverride(recipe.title)) {
+        mainCategory = 'Dessert'
+        changed = true
+      }
+      const cuisine = tidyCuisine(recipe.cuisine)
+      if (cuisine !== recipe.cuisine) changed = true
       const ingredients = recipe.ingredients.map((ing) => {
         if (ing.quantity !== undefined) return ing
         const reparsed = parseIngredient(ing.raw)
@@ -121,7 +128,7 @@ async function tidyStoredRecipes(): Promise<void> {
         return { ...ing, quantity: reparsed.quantity, unit: reparsed.unit, item: reparsed.item }
       })
       // Keep updatedAt so the cleanup doesn't reshuffle the home-screen order.
-      if (changed) tx.store.put({ ...recipe, title: title || recipe.title, ingredients })
+      if (changed) tx.store.put({ ...recipe, title: title || recipe.title, mainCategory, cuisine, ingredients })
     }
     await tx.done
     localStorage.setItem(TIDY_FLAG, TIDY_VERSION)
