@@ -3,7 +3,7 @@ import type { MainCategory, Nutrition, Recipe, Step } from '../types'
 import { ingredientsFromText, newId, tidyRecipeTitle } from '../lib/recipe'
 import { detectVideoSource } from '../lib/import'
 
-const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
+const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
 
 const NUTRITION_FIELDS: { key: keyof Nutrition; label: string }[] = [
   { key: 'calories', label: 'Calories' },
@@ -226,6 +226,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       steps,
       nutrition: buildNutrition(draft.nutrition),
       favorite: initial?.favorite,
+      notes: initial?.notes,
       cookedCount: initial?.cookedCount,
       lastCookedAt: initial?.lastCookedAt,
       createdAt: initial?.createdAt ?? now,
@@ -314,7 +315,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       </label>
 
       <label className="field">
-        <span className="field__label">Source link <span className="field__hint">optional — recipe page or video</span></span>
+        <span className="field__label">Source link <span className="field__hint">optional, recipe page or video</span></span>
         <input
           className="field__input"
           type="url"
@@ -330,7 +331,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
         {draft.image && <img className="image-preview" src={draft.image} alt="" />}
         <div className="photo-actions">
           <label className="btn-ghost btn-file">
-            {draft.image ? 'Change photo' : 'Upload a photo'}
+            {draft.image ? 'Change Photo' : 'Upload a Photo'}
             <input type="file" accept="image/*" onChange={handlePhoto} hidden />
           </label>
           {draft.image && (
@@ -377,7 +378,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
           ))}
         </ol>
         <button type="button" className="btn-ghost btn-add" onClick={addStep}>
-          + Add step
+          + Add Step
         </button>
       </div>
 

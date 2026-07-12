@@ -13,6 +13,18 @@ export function CalendarIcon({ className = 'calendar-icon' }: { className?: stri
   )
 }
 
+/** Filled heart for favourites. */
+export function HeartIcon({ className = 'heart-icon' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 21c-.4 0-.8-.14-1.1-.42C6.6 16.9 2.5 13.3 2.5 9.3 2.5 6.4 4.8 4 7.7 4c1.7 0 3.3.8 4.3 2.1C13 4.8 14.6 4 16.3 4c2.9 0 5.2 2.4 5.2 5.3 0 4-4.1 7.6-8.4 11.28-.3.28-.7.42-1.1.42z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 /** Miniature Apple-Reminders-style glyph for the shopping list button. */
 export function RemindersIcon() {
   return (

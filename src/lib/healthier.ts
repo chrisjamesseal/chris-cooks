@@ -65,7 +65,7 @@ const INGREDIENT_RULES: Rule[] = [
     re: /\b(cheddar|mozzarella|parmesan|cheese)\b/i,
     unless: /reduced|light|low[- ]fat|cream cheese/i,
     swap: 'Use a stronger cheese (mature cheddar, parmesan) and about a third less of it.',
-    benefit: 'Same cheesy hit with fewer calories — or go reduced-fat.',
+    benefit: 'Same cheesy hit with fewer calories, or go reduced-fat.',
   },
   {
     id: 'bacon',
@@ -98,7 +98,7 @@ const INGREDIENT_RULES: Rule[] = [
   {
     id: 'sugar',
     re: /\b(sugar|honey|maple syrup|golden syrup)\b/i,
-    swap: 'Cut the sugar/syrup by a third — most recipes don’t miss it.',
+    swap: 'Cut the sugar/syrup by a third, most recipes don’t miss it.',
     benefit: 'Less sugar without changing the structure of the dish.',
   },
   {
@@ -112,7 +112,7 @@ const INGREDIENT_RULES: Rule[] = [
     id: 'white-rice',
     re: /\b(white |basmati |jasmine )?rice\b/i,
     unless: /brown|wholegrain|cauliflower/i,
-    swap: 'Go half rice, half cauliflower rice — or switch to brown rice.',
+    swap: 'Go half rice, half cauliflower rice, or switch to brown rice.',
     benefit: 'More fibre and fewer calories per plate, same sauce-soaking job.',
   },
   {

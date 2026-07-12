@@ -5,10 +5,51 @@ import { downloadBackup, restoreBackup } from '../lib/backup'
 import { getPlan } from '../lib/plan'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
-import { CalendarIcon } from '../components/icons'
+import { CalendarIcon, HeartIcon } from '../components/icons'
 import type { MainCategory, Recipe } from '../types'
 
-const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
+const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
+const CATEGORY_LABEL: Record<MainCategory, string> = {
+  Breakfast: 'Breakfast',
+  Lunch: 'Lunch',
+  Dinner: 'Dinner',
+  Side: 'Sides',
+  Snack: 'Snacks',
+  Dessert: 'Desserts',
+}
+
+/** Recipes with at least this much protein per serving count as high protein. */
+const HIGH_PROTEIN_G = 25
+const isHighProtein = (r: Recipe) => (r.nutrition?.proteinG ?? 0) >= HIGH_PROTEIN_G
+
+/** Which meal fits the time of day right now. */
+function currentMealPeriod(): { category: MainCategory; title: string } {
+  const h = new Date().getHours()
+  if (h >= 5 && h < 11) return { category: 'Breakfast', title: 'Breakfast Ideas' }
+  if (h >= 11 && h < 15) return { category: 'Lunch', title: 'Lunch Ideas' }
+  return { category: 'Dinner', title: 'Tonight’s Dinner Ideas' }
+}
+
+/** Stable per-day ordering so the ideas strip rotates daily but not per render. */
+function dailyKey(id: string): number {
+  const s = id + Math.floor(Date.now() / 86_400_000)
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return h
+}
+
+/** Comma-separated search input means "what's in my fridge" mode. */
+function fridgeTerms(query: string): string[] {
+  if (!query.includes(',')) return []
+  return query
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length >= 2)
+}
+
+function fridgeScore(recipe: Recipe, terms: string[]): number {
+  return terms.filter((t) => recipe.ingredients.some((i) => i.item.toLowerCase().includes(t))).length
+}
 
 /** Square thumbnail: the recipe's own photo, or a category-coloured emoji placeholder. */
 function Thumb({ recipe, className }: { recipe: Recipe; className: string }) {
@@ -32,9 +73,11 @@ export default function Home() {
   const [category, setCategory] = useState<MainCategory | 'All'>('All')
   const [cuisine, setCuisine] = useState<string>('All')
   const [favOnly, setFavOnly] = useState(false)
+  const [proteinOnly, setProteinOnly] = useState(false)
   const [planCount] = useState(() => getPlan().length)
   const [backupMsg, setBackupMsg] = useState<string | null>(null)
   const restoreInput = useRef<HTMLInputElement>(null)
+  const period = useMemo(currentMealPeriod, [])
 
   useEffect(() => {
     ensureSeeded()
@@ -48,9 +91,9 @@ export default function Home() {
   async function handleBackup() {
     try {
       const n = await downloadBackup()
-      setBackupMsg(`Saved a backup of ${n} recipes ✓`)
+      setBackupMsg(`Saved a Backup of ${n} Recipes ✓`)
     } catch {
-      setBackupMsg('Backup failed — please try again.')
+      setBackupMsg('Backup Failed, Please Try Again')
     }
   }
 
@@ -60,12 +103,12 @@ export default function Home() {
     if (!file) return
     try {
       const n = await restoreBackup(file)
-      setBackupMsg(`Restored ${n} recipes ✓`)
+      setBackupMsg(`Restored ${n} Recipes ✓`)
       const list = await getAllRecipes()
       list.sort((a, b) => b.updatedAt - a.updatedAt)
       setRecipes(list)
     } catch (err) {
-      setBackupMsg(err instanceof Error ? err.message : 'Restore failed.')
+      setBackupMsg(err instanceof Error ? err.message : 'Restore Failed')
     }
   }
 
@@ -74,18 +117,26 @@ export default function Home() {
     setCuisine('All') // reset the sub-filter whenever the category changes
   }
 
-  // Chips reflect the actual collection: only categories with recipes, with counts.
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<MainCategory, number>()
-    for (const r of recipes ?? []) counts.set(r.mainCategory, (counts.get(r.mainCategory) ?? 0) + 1)
-    return counts
-  }, [recipes])
+  // Categories that actually have recipes, with the time-relevant one first.
+  const visibleCategories = useMemo(() => {
+    const present = new Set((recipes ?? []).map((r) => r.mainCategory))
+    const ordered: MainCategory[] = [
+      period.category,
+      ...CATEGORIES.filter((c) => c !== period.category),
+    ]
+    return ordered.filter((c) => present.has(c))
+  }, [recipes, period])
 
-  // Newest additions surface at the top and refresh automatically as recipes are added.
-  const recentlyAdded = useMemo(() => {
-    if (!recipes || recipes.length < 5) return []
-    return [...recipes].sort((a, b) => b.createdAt - a.createdAt).slice(0, 6)
-  }, [recipes])
+  const anyHighProtein = useMemo(() => (recipes ?? []).some(isHighProtein), [recipes])
+
+  // Time-of-day ideas: favourites first, then a daily rotation of the rest.
+  const ideas = useMemo(() => {
+    if (!recipes) return []
+    return recipes
+      .filter((r) => r.mainCategory === period.category)
+      .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) || dailyKey(a.id) - dailyKey(b.id))
+      .slice(0, 6)
+  }, [recipes, period])
 
   // Cuisines within the selected category that have at least two recipes, so the
   // sub-filter stays a tidy handful rather than a wall of one-off tags.
@@ -103,13 +154,17 @@ export default function Home() {
       .map(([c]) => c)
   }, [recipes, category])
 
+  const terms = fridgeTerms(query)
+
   const filtered = useMemo(() => {
     if (!recipes) return []
     const q = query.trim().toLowerCase()
-    return recipes.filter((r) => {
+    const base = recipes.filter((r) => {
       if (favOnly && !r.favorite) return false
+      if (proteinOnly && !isHighProtein(r)) return false
       if (category !== 'All' && r.mainCategory !== category) return false
       if (cuisine !== 'All' && r.cuisine !== cuisine) return false
+      if (terms.length > 0) return fridgeScore(r, terms) > 0
       if (!q) return true
       return (
         r.title.toLowerCase().includes(q) ||
@@ -117,18 +172,31 @@ export default function Home() {
         r.ingredients.some((i) => i.item.toLowerCase().includes(q))
       )
     })
-  }, [recipes, query, category, cuisine, favOnly])
+    if (terms.length > 0) {
+      return [...base].sort((a, b) => fridgeScore(b, terms) - fridgeScore(a, terms) || b.updatedAt - a.updatedAt)
+    }
+    return base
+  }, [recipes, query, category, cuisine, favOnly, proteinOnly, terms])
 
   const hasRecipes = recipes !== null && recipes.length > 0
-  const browsing = query.trim() === '' && category === 'All' && !favOnly
+  const browsing = query.trim() === '' && category === 'All' && !favOnly && !proteinOnly
 
   return (
     <div>
       <div className="page-head">
-        <h1 className="page-title">My Recipes</h1>
+        <h1 className="page-title page-title--head">My Recipes</h1>
         {hasRecipes && (
           <div className="page-head__actions">
-            <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="This week">
+            <button
+              type="button"
+              className={`btn-ghost btn-ghost--sm fav-btn${favOnly ? ' fav-btn--on' : ''}`}
+              onClick={() => setFavOnly((f) => !f)}
+              aria-pressed={favOnly}
+              aria-label="Favourites"
+            >
+              <HeartIcon />
+            </button>
+            <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="This Week">
               <CalendarIcon />
               {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
             </Link>
@@ -157,9 +225,12 @@ export default function Home() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search recipes or ingredients…"
+            placeholder="Search recipes, or list fridge items with commas"
             aria-label="Search recipes"
           />
+          {terms.length > 0 && (
+            <p className="fridge-hint">Fridge search: recipes using the most of your {terms.length} ingredients first.</p>
+          )}
 
           <div className="filter-chips">
             <button
@@ -169,53 +240,50 @@ export default function Home() {
             >
               All
             </button>
-            {CATEGORIES.filter((c) => (categoryCounts.get(c) ?? 0) > 0).map((c) => (
+            {visibleCategories.map((c, i) => (
               <button
                 key={c}
                 type="button"
                 className={`filter-chip${category === c ? ' filter-chip--active' : ''}`}
                 onClick={() => selectCategory(c)}
               >
-                {c} <span className="filter-chip__count">{categoryCounts.get(c)}</span>
+                {i === 0 ? '🕒 ' : ''}
+                {CATEGORY_LABEL[c]}
               </button>
             ))}
-            <button
-              type="button"
-              className={`filter-chip filter-chip--fav${favOnly ? ' filter-chip--active' : ''}`}
-              onClick={() => setFavOnly((f) => !f)}
-              aria-pressed={favOnly}
-            >
-              ♥ Favourites
-            </button>
           </div>
 
-          {subCuisines.length > 1 && (
+          {(anyHighProtein || subCuisines.length > 1) && (
             <div className="filter-chips filter-chips--sub">
-              <button
-                type="button"
-                className={`filter-chip filter-chip--sm${cuisine === 'All' ? ' filter-chip--active' : ''}`}
-                onClick={() => setCuisine('All')}
-              >
-                All {category.toLowerCase()}
-              </button>
-              {subCuisines.map((c) => (
+              {anyHighProtein && (
                 <button
-                  key={c}
                   type="button"
-                  className={`filter-chip filter-chip--sm filter-chip--cuisine${cuisine === c ? ' filter-chip--active' : ''}`}
-                  onClick={() => setCuisine(c)}
+                  className={`filter-chip filter-chip--sm${proteinOnly ? ' filter-chip--active' : ''}`}
+                  onClick={() => setProteinOnly((p) => !p)}
+                  aria-pressed={proteinOnly}
                 >
-                  {c}
+                  💪 High Protein
                 </button>
-              ))}
+              )}
+              {subCuisines.length > 1 &&
+                subCuisines.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`filter-chip filter-chip--sm filter-chip--cuisine${cuisine === c ? ' filter-chip--active' : ''}`}
+                    onClick={() => setCuisine(cuisine === c ? 'All' : c)}
+                  >
+                    {c}
+                  </button>
+                ))}
             </div>
           )}
 
-          {browsing && recentlyAdded.length > 0 && (
+          {browsing && ideas.length > 0 && (
             <section className="recent">
-              <h2 className="section-title">Recently added</h2>
+              <h2 className="section-title">{period.title}</h2>
               <div className="recent-strip">
-                {recentlyAdded.map((recipe) => (
+                {ideas.map((recipe) => (
                   <Link to={`/recipe/${recipe.id}`} className="recent-card" key={recipe.id}>
                     <Thumb recipe={recipe} className="recent-card__thumb" />
                     <span className="recent-card__title">{recipe.title}</span>
@@ -230,17 +298,23 @@ export default function Home() {
           ) : (
             <ul className="recipe-list">
               {filtered.map((recipe) => {
-                const meta = [
-                  recipe.cuisine || recipe.mainCategory,
-                  recipe.times.cook || recipe.times.total,
-                ].filter(Boolean)
+                const score = terms.length > 0 ? fridgeScore(recipe, terms) : 0
                 return (
                   <li key={recipe.id}>
                     <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
                       <Thumb recipe={recipe} className="recipe-card__thumb" />
                       <span className="recipe-card__body">
-                        <span className="recipe-card__title">{recipe.title}</span>
-                        <span className="recipe-card__meta">{meta.join(' · ')}</span>
+                        <span className="recipe-card__title">
+                          {recipe.title}
+                          {isHighProtein(recipe) && <span className="card-protein" title="High Protein"> 💪</span>}
+                          {recipe.favorite && <HeartIcon className="heart-icon card-heart" />}
+                        </span>
+                        <span className="recipe-card__meta">
+                          {recipe.mainCategory}
+                          {score > 0 && (
+                            <span className="card-fridge"> · Uses {score} of Your {terms.length}</span>
+                          )}
+                        </span>
                       </span>
                     </Link>
                   </li>
@@ -250,14 +324,14 @@ export default function Home() {
           )}
 
           <section className="card backup-card">
-            <h2 className="backup-card__title">Keep your recipes safe</h2>
+            <h2 className="backup-card__title">Keep Your Recipes Safe</h2>
             <p className="muted backup-card__hint">
-              Recipes live on this device. Download a backup now and again — restoring it brings
+              Recipes live on this device. Download a backup now and again, restoring it brings
               everything back.
             </p>
             <div className="backup-card__actions">
               <button type="button" className="btn-ghost btn-ghost--sm" onClick={handleBackup}>
-                ⬇︎ Back up my recipes
+                ⬇︎ Back Up My Recipes
               </button>
               <button
                 type="button"

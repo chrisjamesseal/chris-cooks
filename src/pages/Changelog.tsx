@@ -4,6 +4,19 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.4.0',
+    title: 'Smarter home, proper categories & fridge search',
+    notes: [
+      'Fridge search: list what you have with commas ("chicken, potatoes, yogurt") and recipes that use the most of it come first.',
+      'My Notes on every recipe: jot tweaks like "less sugar next time" and they stay with the recipe.',
+      'High Protein: recipes with 25g+ protein per serving get a 💪 tag and their own filter.',
+      'New Sides category, and 22 recipes moved to where they belong (sauces and potato sides are no longer "snacks").',
+      'The filter matching the time of day sits first with a 🕒, and the ideas row now suggests breakfasts in the morning, lunches at midday and dinners tonight.',
+      'Favourites went red, moved to a heart button in the header, and show on recipe cards.',
+      'Cleaner cards (just the category below the title), tidier pills without counts, and removed "I cooked this".',
+    ],
+  },
+  {
     version: '1.3.1',
     title: 'A tidier home screen',
     notes: [
@@ -17,7 +30,7 @@ const RELEASES: Release[] = [
     notes: [
       'This week: add recipes to a weekly plan, then send every ingredient from every planned meal to your shopping list in one tap. Find it at the top of the home screen.',
       'Favourites: tap ♥ on any recipe and filter to just your favourites at home.',
-      '“I cooked this”: log each cook at the end of the method — recipes remember how many times you’ve made them.',
+      '“I cooked this”: log each cook at the end of the method, recipes remember how many times you’ve made them.',
       'Backup & restore: download all your recipes as a single file from the bottom of the home screen, and restore them any time. Your collection is now un-losable.',
     ],
   },
@@ -26,10 +39,10 @@ const RELEASES: Release[] = [
     title: 'Shopping list polish & editable sources',
     notes: [
       'The shopping button now says “Add to Shopping List” with a little Reminders icon.',
-      'Edit a recipe to see, add or change its source link — including swapping in the TikTok/Instagram video link.',
+      'Edit a recipe to see, add or change its source link, including swapping in the TikTok/Instagram video link.',
       'Prep and cook times: just type the number of minutes (other formats like “1 hr 20 min” still work).',
       'Video thumbnails now show a subtle “Press to play” label instead of a big play button.',
-      'Removed the quick-timer row — steps that mention a time still get their own one-tap timer.',
+      'Removed the quick-timer row, steps that mention a time still get their own one-tap timer.',
       'A little more breathing room between Nutrition and the healthier tips.',
     ],
   },
@@ -37,10 +50,10 @@ const RELEASES: Release[] = [
     version: '1.1.0',
     title: 'Tidier titles, tap-to-watch videos & sturdier saving',
     notes: [
-      'Video recipes: the photo is now the video — tap the thumbnail (with its play button) to open the original on TikTok or Instagram.',
+      'Video recipes: the photo is now the video, tap the thumbnail (with its play button) to open the original on TikTok or Instagram.',
       'Recipe names tidied everywhere: hype like “THE BEST creamy pesto pasta” becomes “Creamy Pesto Pasta”, and every title is neatly capitalised.',
-      'Steps now show ingredient amounts more reliably — fixed missing matches for plurals (potato/potatoes) and fraction quantities like ½ tsp.',
-      'Sturdier saving: the app now asks the browser to keep its storage permanently. If recipes have vanished before, that was the browser clearing site data after a week away — adding the app to your Home Screen (Share → Add to Home Screen) prevents it completely.',
+      'Steps now show ingredient amounts more reliably, fixed missing matches for plurals (potato/potatoes) and fraction quantities like ½ tsp.',
+      'Sturdier saving: the app now asks the browser to keep its storage permanently. If recipes have vanished before, that was the browser clearing site data after a week away, adding the app to your Home Screen (Share → Add to Home Screen) prevents it completely.',
       'Removed the “keep screen on” switch.',
     ],
   },
@@ -48,21 +61,21 @@ const RELEASES: Release[] = [
     version: '1.0.0',
     title: 'TikTok & Instagram imports, timers and smarter cooking',
     notes: [
-      'Import recipes straight from TikTok and Instagram — paste the link and we pull in the dish, ingredients, photo and video.',
+      'Import recipes straight from TikTok and Instagram, paste the link and we pull in the dish, ingredients, photo and video.',
       'Watch the original video right on the recipe page, or open it in the app with one tap.',
-      'Kitchen timers: steps that mention a time get a one-tap countdown, plus quick 5/10/15-minute timers on every recipe — with a proper alarm that keeps ringing on screen until you dismiss it.',
+      'Kitchen timers: steps that mention a time get a one-tap countdown, plus quick 5/10/15-minute timers on every recipe, with a proper alarm that keeps ringing on screen until you dismiss it.',
       '“Keep screen on” switch in the Method section so your phone doesn’t sleep mid-recipe.',
       'Your progress sticks: ticked ingredients, completed steps and servings are remembered per recipe, even if you close the app mid-shop or mid-cook.',
-      'Healthier eating built in: every recipe now shows instant ingredient-swap tips under Nutrition — no setup needed.',
+      'Healthier eating built in: every recipe now shows instant ingredient-swap tips under Nutrition, no setup needed.',
       'Home screen refresh: real photos on recipe cards, a “Recently added” row that updates as you add recipes, category counts, and cook times at a glance.',
-      'Optional AI upgrade: deploy the small worker in /worker and video imports get a proper dish name, a written method and the photo read straight from the video — plus a one-tap “rewrite this recipe to be healthier”. See worker/README.md.',
+      'Optional AI upgrade: deploy the small worker in /worker and video imports get a proper dish name, a written method and the photo read straight from the video, plus a one-tap “rewrite this recipe to be healthier”. See worker/README.md.',
     ],
   },
   {
     version: '0.9.0',
     title: 'Crisper food icons',
     notes: [
-      'Recipe icons now render identically on every device — iPhone, Android, laptop — instead of changing with each system font.',
+      'Recipe icons now render identically on every device, iPhone, Android, laptop, instead of changing with each system font.',
       'Uses the Fluent Emoji (flat) set, bundled into the app so it works offline with no extra loading.',
       'Same picture-from-the-title logic as before, just sharper and consistent everywhere.',
     ],
@@ -71,16 +84,16 @@ const RELEASES: Release[] = [
     version: '0.8.0',
     title: 'Make it healthier',
     notes: [
-      'Every recipe has a "Make it healthier" panel — pick what to cut back (calories, saturated fat, sugar or sodium) and get a lighter version.',
+      'Every recipe has a "Make it healthier" panel, pick what to cut back (calories, saturated fat, sugar or sodium) and get a lighter version.',
       'It keeps the dish recognisable and flags any change that affects taste or texture, so you decide before anything updates.',
-      'Needs a one-time AI helper: deploy the small worker in /worker (it holds your API key) and set VITE_AI_CLEANUP_URL — see worker/README.md. Until then the panel says it isn’t connected.',
+      'Needs a one-time AI helper: deploy the small worker in /worker (it holds your API key) and set VITE_AI_CLEANUP_URL, see worker/README.md. Until then the panel says it isn’t connected.',
     ],
   },
   {
     version: '0.7.0',
     title: 'Shopping, tidier data & the edit form',
     notes: [
-      'Ingredients cleaned up — brackets and notes removed, just the item.',
+      'Ingredients cleaned up, brackets and notes removed, just the item.',
       'Steps no longer repeat quantities (they follow the servings you pick).',
       'Edit: upload a photo, ingredient/step boxes grow to fit, steps are separate fields.',
       'Pick a category on the home screen to filter by cuisine underneath.',
@@ -113,7 +126,7 @@ const RELEASES: Release[] = [
   {
     version: '0.2.0',
     title: 'The basics',
-    notes: ['Add, search, view, edit and delete recipes — saved on your device.'],
+    notes: ['Add, search, view, edit and delete recipes, saved on your device.'],
   },
 ]
 
@@ -155,7 +168,7 @@ export default function Changelog() {
           <li>Name the shortcut exactly <strong>Add to Shopping List</strong>.</li>
         </ol>
         <p className="muted">
-          Until it’s set up, the button still copies the list to your clipboard — paste it into
+          Until it’s set up, the button still copies the list to your clipboard, paste it into
           Reminders and it will offer to make separate items.
         </p>
       </section>
