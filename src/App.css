@@ -236,6 +236,38 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   text-decoration: none;
 }
 .page-head__actions { display: flex; gap: 8px; align-items: center; }
+.week-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  color: var(--green-dark);
+}
+.calendar-icon { width: 20px; height: 20px; display: block; }
+.calendar-icon--inline {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+.week-btn__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* Favourite & this-week actions on the recipe page */
 .recipe-actions { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -264,17 +296,19 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .plan-item__remove {
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 12px;
   transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border: 0;
   border-radius: 50%;
-  background: var(--line);
+  background: none;
   color: var(--muted);
-  font-size: 17px;
+  font-size: 20px;
   line-height: 1;
+  padding: 0;
 }
+.plan-item__remove:active { color: var(--ink); }
 
 /* Backup card */
 .backup-card { margin-top: 28px; display: grid; gap: 10px; }

@@ -57,7 +57,7 @@ export default function ThisWeek() {
       {planned.length === 0 ? (
         <div className="empty">
           <p className="muted">
-            Nothing planned yet. Open a recipe and tap <strong>🗓 Add to this week</strong> — then
+            Nothing planned yet. Open a recipe and tap <strong>Add to this week</strong> — then
             send the whole week’s ingredients to your shopping list in one go.
           </p>
           <Link to="/" className="btn-primary" style={{ display: 'block', textAlign: 'center' }}>

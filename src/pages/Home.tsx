@@ -5,6 +5,7 @@ import { downloadBackup, restoreBackup } from '../lib/backup'
 import { getPlan } from '../lib/plan'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
+import { CalendarIcon } from '../components/icons'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
@@ -127,8 +128,9 @@ export default function Home() {
         <h1 className="page-title">My Recipes</h1>
         {hasRecipes && (
           <div className="page-head__actions">
-            <Link to="/plan" className="btn-ghost btn-ghost--sm">
-              🗓 This week{planCount > 0 ? ` · ${planCount}` : ''}
+            <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="This week">
+              <CalendarIcon />
+              {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
             </Link>
             <Link to="/add" className="btn-primary btn-primary--sm">
               + Add

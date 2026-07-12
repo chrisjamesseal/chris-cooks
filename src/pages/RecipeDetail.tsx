@@ -22,6 +22,7 @@ import { inPlan, togglePlan } from '../lib/plan'
 import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
+import { CalendarIcon, RemindersIcon } from '../components/icons'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -107,20 +108,6 @@ function ringAlarm(ctx: AudioContext | null) {
   }
 }
 
-/** Miniature Apple-Reminders-style glyph for the shopping list button. */
-function RemindersIcon() {
-  return (
-    <svg className="reminders-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="1" y="1" width="22" height="22" rx="5.5" fill="#fff" />
-      <circle cx="6.2" cy="7" r="1.9" fill="#ff9500" />
-      <rect x="10" y="5.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
-      <circle cx="6.2" cy="12" r="1.9" fill="#007aff" />
-      <rect x="10" y="10.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
-      <circle cx="6.2" cy="17" r="1.9" fill="#34c759" />
-      <rect x="10" y="15.9" width="9" height="2.2" rx="1.1" fill="#c7c7cc" />
-    </svg>
-  )
-}
 
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -428,7 +415,8 @@ export default function RecipeDetail() {
           onClick={handleTogglePlan}
           aria-pressed={planned}
         >
-          {planned ? '🗓 In this week ✓' : '🗓 Add to this week'}
+          <CalendarIcon className="calendar-icon calendar-icon--inline" />
+          {planned ? ' In this week ✓' : ' Add to this week'}
         </button>
       </div>
 
