@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ensureSeeded, getAllRecipes } from '../db'
+import { ensureSeeded, getAllRecipes, saveRecipe } from '../db'
 import { downloadBackup, restoreBackup } from '../lib/backup'
+import { getPlan, togglePlan } from '../lib/plan'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
+import { CalendarIcon, HeartIcon } from '../components/icons'
 import type { MainCategory, Recipe } from '../types'
 
 const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
@@ -80,6 +82,7 @@ export default function Home() {
     else next.set('fav', '1')
     setParams(next, { replace: true })
   }
+  const [planIds, setPlanIds] = useState<Set<string>>(() => new Set(getPlan()))
   const [backupMsg, setBackupMsg] = useState<string | null>(null)
   const restoreInput = useRef<HTMLInputElement>(null)
   const period = useMemo(currentMealPeriod, [])
@@ -118,22 +121,32 @@ export default function Home() {
   }
 
   function selectCategory(c: MainCategory | 'All') {
-    // Tapping the active category again returns to All.
-    setCategory((current) => (current === c ? 'All' : c))
+    setCategory(c)
     setCuisine('All') // reset the sub-filter whenever the category changes
   }
 
-  // Categories that actually have recipes, with the time-relevant one first.
-  // Once a category is picked, only it (and All) stay visible until deselected.
-  const visibleCategories = useMemo(() => {
-    if (category !== 'All') return [category]
-    const present = new Set((recipes ?? []).map((r) => r.mainCategory))
+  async function toggleFavorite(recipe: Recipe) {
+    const updated: Recipe = { ...recipe, favorite: !recipe.favorite }
+    await saveRecipe(updated)
+    setRecipes((list) => (list ? list.map((r) => (r.id === updated.id ? updated : r)) : list))
+  }
+
+  function togglePlanned(id: string) {
+    togglePlan(id)
+    setPlanIds(new Set(getPlan()))
+  }
+
+  // Dropdown options: categories that actually have recipes, time-relevant first.
+  const categoryOptions = useMemo(() => {
+    const present = new Set(
+      (recipes ?? []).flatMap((r) => [r.mainCategory, ...(r.alsoCategories ?? [])]),
+    )
     const ordered: MainCategory[] = [
       period.category,
       ...CATEGORIES.filter((c) => c !== period.category),
     ]
     return ordered.filter((c) => present.has(c))
-  }, [recipes, period, category])
+  }, [recipes, period])
 
   // Time-of-day ideas: favourites first, then a daily rotation of the rest.
   const ideas = useMemo(() => {
@@ -215,7 +228,21 @@ export default function Home() {
             <p className="fridge-hint">Fridge search: recipes using the most of your {terms.length} ingredients first.</p>
           )}
 
-          <div className="filter-chips">
+          <div className="filter-bar">
+            <select
+              className="field__input category-select"
+              value={category}
+              onChange={(e) => selectCategory(e.target.value as MainCategory | 'All')}
+              aria-label="Category"
+            >
+              <option value="All">All Categories</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c === period.category ? '🕒 ' : ''}
+                  {CATEGORY_LABEL[c]}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className={`filter-chip filter-chip--fav${favOnly ? ' filter-chip--fav-active' : ''}`}
@@ -224,24 +251,6 @@ export default function Home() {
             >
               ❤️ Favourites
             </button>
-            <button
-              type="button"
-              className={`filter-chip${category === 'All' ? ' filter-chip--active' : ''}`}
-              onClick={() => selectCategory('All')}
-            >
-              All
-            </button>
-            {visibleCategories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={`filter-chip${category === c ? ' filter-chip--active' : ''}`}
-                onClick={() => selectCategory(c)}
-              >
-                {c === period.category && category === 'All' ? '🕒 ' : ''}
-                {CATEGORY_LABEL[c]}
-              </button>
-            ))}
           </div>
 
           {subCuisines.length > 1 && (
@@ -281,27 +290,49 @@ export default function Home() {
             <ul className="recipe-list">
               {filtered.map((recipe) => {
                 const score = terms.length > 0 ? fridgeScore(recipe, terms) : 0
+                const inMealPlan = planIds.has(recipe.id)
+                const metaBits = [
+                  recipe.nutrition?.calories ? `${Math.round(recipe.nutrition.calories)} kcal` : '',
+                  isHighProtein(recipe) ? '💪' : '',
+                ].filter(Boolean)
                 return (
-                  <li key={recipe.id}>
-                    <Link to={`/recipe/${recipe.id}`} className="card recipe-card">
+                  <li className="recipe-row" key={recipe.id}>
+                    <Link to={`/recipe/${recipe.id}`} className="card recipe-card recipe-card--actions">
                       <Thumb recipe={recipe} className="recipe-card__thumb" />
-                      {(recipe.favorite || isHighProtein(recipe)) && (
-                        <span className="recipe-card__badges" aria-hidden="true">
-                          {isHighProtein(recipe) && '💪'}
-                          {recipe.favorite && '❤️'}
-                        </span>
-                      )}
                       <span className="recipe-card__body">
-                        <span className="recipe-card__title">{recipe.title}</span>
-                        <span className="recipe-card__meta">
-                          {recipe.mainCategory}
-                          {recipe.nutrition?.calories ? ` · ${Math.round(recipe.nutrition.calories)} kcal` : ''}
-                          {score > 0 && (
-                            <span className="card-fridge"> · Uses {score} of Your {terms.length}</span>
-                          )}
-                        </span>
+                        <span className="recipe-card__title recipe-card__title--clamp">{recipe.title}</span>
+                        {(metaBits.length > 0 || score > 0) && (
+                          <span className="recipe-card__meta">
+                            {metaBits.join(' ')}
+                            {score > 0 && (
+                              <span className="card-fridge">
+                                {metaBits.length > 0 ? ' · ' : ''}Uses {score} of Your {terms.length}
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </span>
                     </Link>
+                    <span className="recipe-row__actions">
+                      <button
+                        type="button"
+                        className={`card-action${recipe.favorite ? ' card-action--fav' : ''}`}
+                        onClick={() => toggleFavorite(recipe)}
+                        aria-label={recipe.favorite ? 'Remove From Favourites' : 'Add to Favourites'}
+                        aria-pressed={!!recipe.favorite}
+                      >
+                        <HeartIcon className="heart-icon" />
+                      </button>
+                      <button
+                        type="button"
+                        className={`card-action${inMealPlan ? ' card-action--plan' : ''}`}
+                        onClick={() => togglePlanned(recipe.id)}
+                        aria-label={inMealPlan ? 'Remove From Meal Plan' : 'Add to Meal Plan'}
+                        aria-pressed={inMealPlan}
+                      >
+                        <CalendarIcon className="calendar-icon" />
+                      </button>
+                    </span>
                   </li>
                 )
               })}

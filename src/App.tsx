@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import AddRecipe from './pages/AddRecipe'
@@ -28,7 +29,13 @@ function AppHeader() {
 /** Fixed bottom navigation: the app's three main places, one tap away. */
 function BottomNav() {
   const { pathname } = useLocation()
-  const planCount = getPlan().length
+  const [planCount, setPlanCount] = useState(() => getPlan().length)
+
+  useEffect(() => {
+    const update = () => setPlanCount(getPlan().length)
+    window.addEventListener('planchange', update)
+    return () => window.removeEventListener('planchange', update)
+  }, [])
   const active = pathname.startsWith('/plan') ? 'plan' : pathname.startsWith('/nutrition') ? 'nutrition' : 'recipes'
 
   return (

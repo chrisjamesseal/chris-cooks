@@ -17,6 +17,8 @@ export function setPlan(ids: string[]): void {
   } catch {
     // Storage full/unavailable — the plan just won't persist.
   }
+  // Let live UI (nav badge) refresh without a navigation.
+  window.dispatchEvent(new Event('planchange'))
 }
 
 export function inPlan(id: string): boolean {
