@@ -4,6 +4,16 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.7.1',
+    title: 'Calmer home screen',
+    notes: [
+      'The category pills are now a single dropdown, much less to look at.',
+      'Every recipe card has two neat stacked buttons: tap the heart to favourite, tap the calendar to add it to your meal plan, right from the list.',
+      'Recipe titles get two full lines on cards, the category label below them is gone.',
+      'More breathing room under the tab bar when the app is opened from your Home Screen.',
+    ],
+  },
+  {
     version: '1.7.0',
     title: 'A proper nutrition hub',
     notes: [

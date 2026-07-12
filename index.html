@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>chris-cooks</title>
+    <!-- viewport-fit=cover makes env(safe-area-inset-*) real on iPhone, so the
+         bottom nav clears the home indicator when opened from the Home Screen. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-title" content="Chris Cooks" />
+    <title>Chris Cooks</title>
   </head>
   <body>
     <div id="root"></div>
