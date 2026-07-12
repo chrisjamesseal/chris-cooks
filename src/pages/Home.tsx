@@ -132,7 +132,7 @@ export default function Home() {
   const ideas = useMemo(() => {
     if (!recipes) return []
     return recipes
-      .filter((r) => r.mainCategory === period.category)
+      .filter((r) => r.mainCategory === period.category || r.alsoCategories?.includes(period.category))
       .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) || dailyKey(a.id) - dailyKey(b.id))
       .slice(0, 6)
   }, [recipes, period])
@@ -161,7 +161,8 @@ export default function Home() {
     const base = recipes.filter((r) => {
       if (favOnly && !r.favorite) return false
       if (proteinOnly && !isHighProtein(r)) return false
-      if (category !== 'All' && r.mainCategory !== category) return false
+      if (category !== 'All' && r.mainCategory !== category && !r.alsoCategories?.includes(category))
+        return false
       if (cuisine !== 'All' && r.cuisine !== cuisine) return false
       if (terms.length > 0) return fridgeScore(r, terms) > 0
       if (!q) return true

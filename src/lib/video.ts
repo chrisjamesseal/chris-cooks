@@ -12,7 +12,10 @@ export type VideoInfo = {
 
 export function videoInfoFromUrl(url: string | undefined): VideoInfo | null {
   if (!url) return null
-  if (/tiktok\.com/i.test(url)) return { platform: 'tiktok', label: 'TikTok', url }
-  if (/instagram\.com|instagr\.am/i.test(url)) return { platform: 'instagram', label: 'Instagram', url }
+  // A hand-typed source may lack the protocol; without it the href is treated
+  // as a relative path and the link silently goes nowhere useful.
+  const absolute = /^https?:\/\//i.test(url) ? url : `https://${url.trim()}`
+  if (/tiktok\.com/i.test(url)) return { platform: 'tiktok', label: 'TikTok', url: absolute }
+  if (/instagram\.com|instagr\.am/i.test(url)) return { platform: 'instagram', label: 'Instagram', url: absolute }
   return null
 }

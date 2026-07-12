@@ -129,15 +129,10 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   border-color: var(--green);
   color: #fff;
 }
-.filter-chips--sub { margin-top: -8px; padding-left: 4px; }
-.filter-chips--sub .filter-chip {
-  background: #eaf1ec;
-  border-color: transparent;
-  color: var(--green-dark);
-}
-.filter-chips--sub .filter-chip.filter-chip--active {
-  background: var(--green);
-  color: #fff;
+.filter-chips--sub {
+  margin-top: -6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
 .filter-chip--sm { font-size: 13px; padding: 5px 12px; }
 .filter-chip--cuisine { text-transform: capitalize; }
@@ -279,6 +274,13 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   color: var(--green-dark);
 }
 .calendar-icon { width: 20px; height: 20px; display: block; }
+.plus-icon { width: 20px; height: 20px; display: block; }
+.platform-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+}
 .calendar-icon--inline {
   width: 16px;
   height: 16px;
@@ -572,10 +574,11 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 52px;
   text-align: left;
   border: 0;
   background: none;
-  padding: 13px 6px;
+  padding: 15px 10px;
   font: inherit;
   color: var(--ink);
   line-height: 1.4;
@@ -619,6 +622,13 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 }
 
 .shopping-actions { margin-top: 14px; }
+.shopping-actions--sticky {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  margin-top: 4px;
+  background: linear-gradient(to top, var(--bg) 75%, rgba(246, 248, 247, 0));
+}
 .shopping-actions .btn-primary { width: 100%; }
 .shopping-actions .btn-primary:disabled { opacity: 0.5; }
 

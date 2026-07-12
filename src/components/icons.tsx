@@ -25,6 +25,54 @@ export function HeartIcon({ className = 'heart-icon' }: { className?: string }) 
   )
 }
 
+/** Centered plus for the header add button (the ＋ glyph sits off-centre). */
+export function PlusIcon() {
+  return (
+    <svg className="plus-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** TikTok-style musical note glyph. */
+export function TikTokIcon() {
+  return (
+    <svg className="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1" y="1" width="22" height="22" rx="5.5" fill="#010101" />
+      <path
+        d="M15.2 5h2.1c.2 1.5 1.1 2.5 2.7 2.7v2.1c-1 0-1.9-.3-2.7-.9v4.6a4.7 4.7 0 1 1-4.7-4.7c.2 0 .5 0 .7.1v2.2a2.5 2.5 0 1 0 1.9 2.4V5z"
+        fill="#fff"
+      />
+      <path
+        d="M14.7 4.6h2.1c.2 1.5 1.1 2.5 2.7 2.7v2.1c-1 0-1.9-.3-2.7-.9v4.6"
+        fill="none"
+        stroke="#25f4ee"
+        strokeWidth="0.6"
+      />
+    </svg>
+  )
+}
+
+/** Instagram-style camera glyph. */
+export function InstagramIcon() {
+  return (
+    <svg className="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id="ig-grad" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#fd5" />
+          <stop offset="0.5" stopColor="#ff543e" />
+          <stop offset="1" stopColor="#c837ab" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="22" height="22" rx="5.5" fill="url(#ig-grad)" />
+      <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="4" fill="none" stroke="#fff" strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="3.4" fill="none" stroke="#fff" strokeWidth="1.7" />
+      <circle cx="16.4" cy="7.6" r="1.1" fill="#fff" />
+    </svg>
+  )
+}
+
 /** Miniature Apple-Reminders-style glyph for the shopping list button. */
 export function RemindersIcon() {
   return (

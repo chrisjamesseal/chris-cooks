@@ -23,6 +23,7 @@ type NutritionDraft = Partial<Record<keyof Nutrition, string>>
 export type RecipeDraft = {
   title: string
   mainCategory: MainCategory
+  alsoCategories: MainCategory[]
   cuisine: string
   servings: string
   prep: string
@@ -118,6 +119,7 @@ function draftFromRecipe(recipe?: Recipe): RecipeDraft {
   return {
     title: recipe?.title ?? '',
     mainCategory: recipe?.mainCategory ?? 'Dinner',
+    alsoCategories: recipe?.alsoCategories ?? [],
     cuisine: recipe?.cuisine ?? '',
     servings: recipe ? String(recipe.servings) : '2',
     prep: timeToDraft(recipe?.times.prep),
@@ -208,13 +210,16 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
     setError(null)
     setSaving(true)
     const now = Date.now()
-    const sourceUrl = draft.sourceUrl.trim()
+    let sourceUrl = draft.sourceUrl.trim()
+    // A pasted link without a protocol would save as a broken relative URL.
+    if (sourceUrl && !/^https?:\/\//i.test(sourceUrl)) sourceUrl = `https://${sourceUrl}`
     const recipe: Recipe = {
       id: initial?.id ?? crypto.randomUUID(),
       schemaVersion: 1,
       title,
       image: draft.image.trim() || undefined,
       mainCategory: draft.mainCategory,
+      alsoCategories: draft.alsoCategories.filter((c) => c !== draft.mainCategory),
       cuisine: draft.cuisine.trim() || undefined,
       servings: Math.max(1, Number(draft.servings) || 1),
       times: {
@@ -279,6 +284,30 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
             onChange={(e) => set('servings', e.target.value)}
           />
         </label>
+      </div>
+
+      <div className="field">
+        <span className="field__label">Also Show In <span className="field__hint">optional, e.g. pancakes in Breakfast and Lunch</span></span>
+        <div className="filter-chips" style={{ marginBottom: 0 }}>
+          {CATEGORIES.filter((c) => c !== draft.mainCategory).map((c) => {
+            const on = draft.alsoCategories.includes(c)
+            return (
+              <button
+                key={c}
+                type="button"
+                className={`filter-chip filter-chip--sm${on ? ' filter-chip--active' : ''}`}
+                onClick={() =>
+                  set(
+                    'alsoCategories',
+                    on ? draft.alsoCategories.filter((x) => x !== c) : [...draft.alsoCategories, c],
+                  )
+                }
+              >
+                {c}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="field-row">
