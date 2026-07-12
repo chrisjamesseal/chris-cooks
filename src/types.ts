@@ -1,4 +1,4 @@
-export type MainCategory = 'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert' | 'Snack'
+export type MainCategory = 'Breakfast' | 'Lunch' | 'Dinner' | 'Side' | 'Dessert' | 'Snack'
 
 export type Recipe = {
   id: string
@@ -14,6 +14,7 @@ export type Recipe = {
   steps: Step[]
   nutrition?: Nutrition
   favorite?: boolean
+  notes?: string
   cookedCount?: number
   lastCookedAt?: number
   createdAt: number

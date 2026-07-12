@@ -28,7 +28,7 @@ export default function ThisWeek() {
   }
 
   function clearAll() {
-    if (!confirm('Clear this week’s plan?')) return
+    if (!confirm('Clear This Week’s Plan?')) return
     setIds([])
     setPlan([])
   }
@@ -38,7 +38,7 @@ export default function ThisWeek() {
   function shopAll() {
     if (allLines.length === 0) return
     sendToShoppingList(allLines)
-    setToast('Opening Reminders… (list also copied)')
+    setToast('Opening Reminders… (List Also Copied)')
     setTimeout(() => setToast(null), 2200)
   }
 
@@ -49,7 +49,7 @@ export default function ThisWeek() {
         <h1 className="page-title">This week</h1>
         {planned.length > 0 && (
           <button type="button" className="link-btn" onClick={clearAll}>
-            Clear plan
+            Clear Plan
           </button>
         )}
       </div>
@@ -57,11 +57,11 @@ export default function ThisWeek() {
       {planned.length === 0 ? (
         <div className="empty">
           <p className="muted">
-            Nothing planned yet. Open a recipe and tap <strong>Add to this week</strong> — then
+            Nothing planned yet. Open a recipe and tap <strong>Add to This Week</strong>, then
             send the whole week’s ingredients to your shopping list in one go.
           </p>
           <Link to="/" className="btn-primary" style={{ display: 'block', textAlign: 'center' }}>
-            Browse recipes
+            Browse Recipes
           </Link>
         </div>
       ) : (
@@ -106,7 +106,7 @@ export default function ThisWeek() {
 
           <div className="shopping-actions">
             <button type="button" className="btn-primary btn-reminders" onClick={shopAll}>
-              Add all {allLines.length} to Shopping List
+              Add All {allLines.length} to Shopping List
             </button>
           </div>
         </>

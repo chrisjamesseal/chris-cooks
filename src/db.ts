@@ -49,7 +49,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '4'
+const SEED_VERSION = '5'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 const SEED_PREFIX = 'seed-'
 
@@ -94,7 +94,7 @@ async function seedIfNeeded(): Promise<void> {
 }
 
 // Bump to re-run the cleanup over already-stored recipes.
-const TIDY_VERSION = '1'
+const TIDY_VERSION = '2'
 const TIDY_FLAG = 'chris-cooks:recipeTidyVersion'
 
 /**

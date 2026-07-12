@@ -155,9 +155,10 @@ function parseInstructions(value: Json): Step[] {
 
 function mapCategory(raw: string | undefined): MainCategory {
   const c = (raw || '').toLowerCase()
+  if (/side|sauce|condiment|dip|dressing|accompaniment/.test(c)) return 'Side'
   if (/dessert|cake|pudding|sweet|bake/.test(c)) return 'Dessert'
   if (/breakfast|brunch/.test(c)) return 'Breakfast'
-  if (/snack|canap|starter|appetiser|appetizer|side/.test(c)) return 'Snack'
+  if (/snack|canap|starter|appetiser|appetizer/.test(c)) return 'Snack'
   if (/lunch/.test(c)) return 'Lunch'
   return 'Dinner'
 }
@@ -433,7 +434,7 @@ function parseVideoCaption(caption: string): {
     steps:
       steps.length > 0
         ? steps
-        : ['Full method not included in the caption — check the original video for step-by-step instructions.'],
+        : ['Full method not included in the caption, check the original video for step-by-step instructions.'],
   }
 }
 

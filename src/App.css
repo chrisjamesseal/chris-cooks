@@ -286,9 +286,56 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   border-color: var(--green);
   color: #fff;
 }
-.filter-chip--fav { color: #c2185b; }
-.filter-chip--fav.filter-chip--active { background: #c2185b; border-color: #c2185b; color: #fff; }
-.btn-cooked { width: 100%; margin-top: 12px; }
+.recipe-action--fav {
+  background: #d7263d;
+  border-color: #d7263d;
+  color: #fff;
+}
+
+/* Favourites: heart button in the home header, hearts on cards */
+.fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  color: #d7263d;
+}
+.fav-btn--on {
+  background: #d7263d;
+  border-color: #d7263d;
+  color: #fff;
+}
+.heart-icon { width: 18px; height: 18px; display: block; }
+.card-heart {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  color: #d7263d;
+  margin-left: 6px;
+  vertical-align: -1px;
+}
+.card-protein { font-size: 13px; }
+.chip--protein { color: var(--green-dark); border-color: var(--green); }
+
+/* Fridge search */
+.fridge-hint {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  color: var(--green-dark);
+  font-weight: 500;
+}
+.card-fridge { color: var(--green-dark); font-weight: 600; }
+
+/* Header alignment: the title's bottom margin fights the flex centring */
+.page-title--head { margin-bottom: 0; }
+.page-head { margin-bottom: 16px; }
+
+/* My Notes */
+.notes { padding: 12px 14px; display: grid; gap: 6px; }
+.notes p { margin: 0; font-size: 15px; line-height: 1.5; }
+.notes__edit-hint { font-size: 12px; color: var(--muted); font-weight: 600; }
+.notes-edit { display: grid; gap: 10px; }
+.btn-notes { width: 100%; }
 
 /* This week plan */
 .plan-item { position: relative; }
@@ -334,20 +381,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   object-fit: cover;
   display: block;
 }
-.recipe-hero__cta {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.recipe-hero--video:active .recipe-hero__cta { opacity: 0.8; }
+.recipe-hero--video:active { opacity: 0.9; }
 .video-link {
   margin-bottom: 16px;
   display: flex;

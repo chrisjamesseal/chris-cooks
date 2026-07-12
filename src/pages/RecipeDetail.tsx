@@ -109,6 +109,28 @@ function ringAlarm(ctx: AudioContext | null) {
 }
 
 
+/** Auto-growing textarea for the notes editor. */
+function AutoNotes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      className="field__input field__input--auto"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={3}
+      placeholder="Less sugar next time, 20 minutes was plenty…"
+      autoFocus
+    />
+  )
+}
+
 export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -134,9 +156,12 @@ export default function RecipeDetail() {
   const [nowTick, setNowTick] = useState(() => Date.now())
   const audioRef = useRef<AudioContext | null>(null)
   const [planned, setPlanned] = useState(false)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesDraft, setNotesDraft] = useState('')
 
   useEffect(() => {
     if (id) setPlanned(inPlan(id))
+    setEditingNotes(false)
   }, [id])
 
   useEffect(() => {
@@ -253,7 +278,7 @@ export default function RecipeDetail() {
           else toggleTimer(stepId, seconds)
         }}
       >
-        {done ? '⏱ Time’s up! Tap to dismiss' : running ? `⏱ ${formatCountdown(remaining)} · tap to cancel` : idleLabel}
+        {done ? '⏱ Time’s Up! Tap to Dismiss' : running ? `⏱ ${formatCountdown(remaining)} · Tap to Cancel` : idleLabel}
       </button>
     )
   }
@@ -262,29 +287,29 @@ export default function RecipeDetail() {
     const remaining = loaded.ingredients.filter((i) => !have.has(i.id)).map((i) => scaleIngredientText(i, factor))
     if (remaining.length === 0) return
     sendToShoppingList(remaining)
-    flash('Opening Reminders… (list also copied)')
+    flash('Opening Reminders… (List Also Copied)')
   }
 
   async function toggleFavorite() {
     const updated: Recipe = { ...loaded, favorite: !loaded.favorite }
     await saveRecipe(updated)
     setRecipe(updated)
-    flash(updated.favorite ? 'Added to favourites ♥' : 'Removed from favourites')
+    flash(updated.favorite ? 'Added to Favourites ♥' : 'Removed From Favourites')
   }
 
   function handleTogglePlan() {
     const nowIn = togglePlan(loaded.id)
     setPlanned(nowIn)
-    flash(nowIn ? 'Added to this week 🗓' : 'Removed from this week')
+    flash(nowIn ? 'Added to This Week 🗓' : 'Removed From This Week')
   }
 
-  async function markCooked() {
-    const count = (loaded.cookedCount ?? 0) + 1
-    const updated: Recipe = { ...loaded, cookedCount: count, lastCookedAt: Date.now() }
+  async function saveNotes() {
+    const notes = notesDraft.trim()
+    const updated: Recipe = { ...loaded, notes: notes || undefined }
     await saveRecipe(updated)
     setRecipe(updated)
-    setCompletedThrough(-1)
-    flash(count === 1 ? 'First cook logged 🍽' : `Cooked ${count} times 🍽`)
+    setEditingNotes(false)
+    flash('Notes Saved ✓')
   }
 
   function flash(msg: string) {
@@ -319,7 +344,7 @@ export default function RecipeDetail() {
     setCompletedThrough(-1)
     setHave(new Set())
     setHealthResult(null)
-    flash('Updated to a healthier version')
+    flash('Updated to a Healthier Version')
   }
 
   const baseServings = recipe.servings || 1
@@ -362,10 +387,9 @@ export default function RecipeDetail() {
           href={video.url}
           target="_blank"
           rel="noreferrer"
-          aria-label={`Watch the video on ${video.label}`}
+          aria-label={`Watch the Video on ${video.label}`}
         >
           <img src={recipe.image} alt={recipe.title} />
-          <span className="recipe-hero__cta">▶ Press to play on {video.label}</span>
         </a>
       ) : recipe.image ? (
         <img
@@ -381,7 +405,7 @@ export default function RecipeDetail() {
           to={`/recipe/${recipe.id}/edit`}
           className="recipe-hero recipe-hero--ph"
           style={{ background: placeholderGradient(recipe.mainCategory) }}
-          aria-label="Add a photo"
+          aria-label="Add a Photo"
         >
           <FoodIcon emoji={placeholderEmoji(recipe.title, recipe.mainCategory)} />
           <span className="recipe-hero__add">＋ Add a photo</span>
@@ -395,15 +419,15 @@ export default function RecipeDetail() {
         {times.map((t) => (
           <span className="chip" key={t as string}>{t}</span>
         ))}
-        {(recipe.cookedCount ?? 0) > 0 && (
-          <span className="chip">🍽 Cooked {recipe.cookedCount}×</span>
+        {(recipe.nutrition?.proteinG ?? 0) >= 25 && (
+          <span className="chip chip--protein">💪 High Protein</span>
         )}
       </div>
 
       <div className="recipe-actions">
         <button
           type="button"
-          className={`recipe-action${recipe.favorite ? ' recipe-action--on' : ''}`}
+          className={`recipe-action${recipe.favorite ? ' recipe-action--fav' : ''}`}
           onClick={toggleFavorite}
           aria-pressed={!!recipe.favorite}
         >
@@ -416,13 +440,13 @@ export default function RecipeDetail() {
           aria-pressed={planned}
         >
           <CalendarIcon className="calendar-icon calendar-icon--inline" />
-          {planned ? ' In this week ✓' : ' Add to this week'}
+          {planned ? ' In This Week ✓' : ' Add to This Week'}
         </button>
       </div>
 
       {video && !recipe.image && (
         <a className="video-link card" href={video.url} target="_blank" rel="noreferrer">
-          {video.platform === 'tiktok' ? '🎵' : '📸'} Watch the video on {video.label}
+          {video.platform === 'tiktok' ? '🎵' : '📸'} Watch the Video on {video.label}
           <span className="video-link__arrow" aria-hidden="true">↗</span>
         </a>
       )}
@@ -433,7 +457,7 @@ export default function RecipeDetail() {
           Select any items you already have to create a shopping list.{' '}
           {have.size > 0 && (
             <button type="button" className="link-btn" onClick={() => setHave(new Set())}>
-              Clear ticks
+              Clear Ticks
             </button>
           )}
         </p>
@@ -458,12 +482,12 @@ export default function RecipeDetail() {
           })}
         </ul>
 
-        <div className="servings-row" role="group" aria-label="Number of servings">
+        <div className="servings-row" role="group" aria-label="Number of Servings">
           <button
             type="button"
             className="stepper__btn"
             onClick={() => setPeople((p) => Math.max(1, p - 1))}
-            aria-label="Fewer servings"
+            aria-label="Fewer Servings"
           >
             −
           </button>
@@ -479,7 +503,7 @@ export default function RecipeDetail() {
             type="button"
             className="stepper__btn"
             onClick={() => setPeople((p) => p + 1)}
-            aria-label="More servings"
+            aria-label="More Servings"
           >
             +
           </button>
@@ -493,7 +517,7 @@ export default function RecipeDetail() {
             disabled={remainingCount === 0}
           >
             {remainingCount === 0 ? (
-              'Got everything ✓'
+              'Got Everything ✓'
             ) : (
               <>
                 <RemindersIcon /> Add {remainingCount} to Shopping List
@@ -532,7 +556,7 @@ export default function RecipeDetail() {
                     {stepParagraphs(deQuantifyStep(step.text)).map((para, i) => (
                       <p key={i}>{para}</p>
                     ))}
-                    {seconds !== undefined && timerChip(step.id, seconds, `⏱ Start ${timerLabel(seconds)} timer`)}
+                    {seconds !== undefined && timerChip(step.id, seconds, `⏱ Start ${timerLabel(seconds)} Timer`)}
                     {used.length > 0 && (
                       <div className="step-ingredients">
                         {used.map((ing) => (
@@ -547,11 +571,40 @@ export default function RecipeDetail() {
               )
             })}
           </ol>
-          <button type="button" className="btn-ghost btn-cooked" onClick={markCooked}>
-            🍽 I cooked this
-          </button>
         </section>
       )}
+
+      <section>
+        <h2 className="section-title">My Notes</h2>
+        {editingNotes ? (
+          <div className="notes-edit">
+            <AutoNotes value={notesDraft} onChange={setNotesDraft} />
+            <div className="form-actions">
+              <button type="button" className="btn-ghost" onClick={() => setEditingNotes(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" onClick={saveNotes}>
+                Save Notes
+              </button>
+            </div>
+          </div>
+        ) : recipe.notes ? (
+          <div className="notes card" onClick={() => { setNotesDraft(loaded.notes ?? ''); setEditingNotes(true) }}>
+            {recipe.notes.split('\n').map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+            <span className="notes__edit-hint">Tap to Edit</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn-ghost btn-notes"
+            onClick={() => { setNotesDraft(''); setEditingNotes(true) }}
+          >
+            ✏️ Add a Note
+          </button>
+        )}
+      </section>
 
       <section>
         <h2 className="section-title">
@@ -576,7 +629,7 @@ export default function RecipeDetail() {
           </dl>
         ) : (
           <p className="scale-note">
-            No nutrition info yet — you can add it via <Link to={`/recipe/${recipe.id}/edit`}>Edit</Link>.
+            No nutrition info yet, add it via <Link to={`/recipe/${recipe.id}/edit`}>Edit</Link>.
           </p>
         )}
 
@@ -591,7 +644,7 @@ export default function RecipeDetail() {
               ))}
             </ul>
           ) : (
-            <p className="muted">No obvious swaps to suggest — this one already looks pretty lean.</p>
+            <p className="muted">No obvious swaps to suggest, this one already looks pretty lean.</p>
           )}
 
           {aiOn && (
@@ -604,7 +657,7 @@ export default function RecipeDetail() {
                   </p>
                   {healthResult.changes.length > 0 && (
                     <div className="healthier__flags">
-                      <span className="healthier__flags-title">Worth knowing — these affect taste or texture:</span>
+                      <span className="healthier__flags-title">Worth knowing, these affect taste or texture:</span>
                       <ul>
                         {healthResult.changes.map((c, i) => (
                           <li key={i}>{c}</li>
@@ -614,10 +667,10 @@ export default function RecipeDetail() {
                   )}
                   <div className="form-actions">
                     <button type="button" className="btn-ghost" onClick={() => setHealthResult(null)}>
-                      Keep original
+                      Keep Original
                     </button>
                     <button type="button" className="btn-primary" onClick={applyHealthier}>
-                      Apply changes
+                      Apply Changes
                     </button>
                   </div>
                 </>
@@ -631,7 +684,7 @@ export default function RecipeDetail() {
                         className={`filter-chip filter-chip--sm${priority === p.key ? ' filter-chip--active' : ''}`}
                         onClick={() => setPriority(p.key)}
                       >
-                        Less {p.label.toLowerCase()}
+                        Less {p.label}
                       </button>
                     ))}
                   </div>
@@ -641,7 +694,7 @@ export default function RecipeDetail() {
                     onClick={generateHealthier}
                     disabled={healthLoading}
                   >
-                    {healthLoading ? 'Thinking…' : 'Rewrite this recipe to be healthier'}
+                    {healthLoading ? 'Thinking…' : 'Rewrite This Recipe to Be Healthier'}
                   </button>
                   {healthError && <p className="form-error" role="alert">{healthError}</p>}
                 </>
