@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.5.0',
+    title: 'Meal Plan upgrades & recipes in more than one category',
+    notes: [
+      'Recipes can now live in more than one category: set "Also Show In" when editing, so pancakes can appear under Breakfast and Lunch.',
+      '"This Week" is now called Meal Plan everywhere, and its Add to Shopping List button stays pinned to the bottom while you tick things off.',
+      'Bigger tap targets on shopping list items.',
+      'The Watch the Video link shows the proper TikTok or Instagram app icon, and links typed without "https://" no longer lead nowhere.',
+      'A divider now separates cuisines from the main categories, with matching pill styles, and the add button got a crisper, centred plus.',
+    ],
+  },
+  {
     version: '1.4.2',
     title: 'Smarter weekly shop & cleaner filters',
     notes: [

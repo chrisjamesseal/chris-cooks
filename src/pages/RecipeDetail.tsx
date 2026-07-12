@@ -22,7 +22,7 @@ import { inPlan, togglePlan } from '../lib/plan'
 import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
-import { CalendarIcon, RemindersIcon } from '../components/icons'
+import { CalendarIcon, InstagramIcon, RemindersIcon, TikTokIcon } from '../components/icons'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -300,7 +300,7 @@ export default function RecipeDetail() {
   function handleTogglePlan() {
     const nowIn = togglePlan(loaded.id)
     setPlanned(nowIn)
-    flash(nowIn ? 'Added to This Week ✓' : 'Removed From Plan')
+    flash(nowIn ? 'Added to Meal Plan ✓' : 'Removed From Meal Plan')
   }
 
   async function saveNotes() {
@@ -415,6 +415,9 @@ export default function RecipeDetail() {
 
       <div className="chips">
         <span className="chip">{recipe.mainCategory}</span>
+        {recipe.alsoCategories?.map((c) => (
+          <span className="chip" key={c}>{c}</span>
+        ))}
         {recipe.cuisine && <span className="chip chip--cuisine">{recipe.cuisine}</span>}
         {times.map((t) => (
           <span className="chip" key={t as string}>{t}</span>
@@ -440,13 +443,13 @@ export default function RecipeDetail() {
           aria-pressed={planned}
         >
           <CalendarIcon className="calendar-icon calendar-icon--inline" />
-          {planned ? ' In This Week ✓' : ' Add to This Week'}
+          {planned ? ' In Meal Plan ✓' : ' Add to Meal Plan'}
         </button>
       </div>
 
       {video && !recipe.image && (
         <a className="video-link card" href={video.url} target="_blank" rel="noreferrer">
-          {video.platform === 'tiktok' ? '🎵' : '📸'} Watch the Video on {video.label}
+          {video.platform === 'tiktok' ? <TikTokIcon /> : <InstagramIcon />} Watch the Video on {video.label}
           <span className="video-link__arrow" aria-hidden="true">↗</span>
         </a>
       )}

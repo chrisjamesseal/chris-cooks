@@ -7,6 +7,8 @@ export type Recipe = {
   image?: string
   source?: { type: 'url' | 'tiktok' | 'instagram' | 'manual'; url?: string }
   mainCategory: MainCategory
+  /** Extra categories the recipe should also appear under (e.g. pancakes in Breakfast AND Lunch). */
+  alsoCategories?: MainCategory[]
   cuisine?: string
   servings: number
   times: { prep?: string; cook?: string; total?: string }

@@ -50,7 +50,7 @@ export default function ThisWeek() {
   }
 
   function clearAll() {
-    if (!confirm('Clear This Week’s Plan?')) return
+    if (!confirm('Clear Your Meal Plan?')) return
     setIds([])
     setPlan([])
     setHave(new Set())
@@ -79,7 +79,7 @@ export default function ThisWeek() {
     <div>
       <Link to="/" className="back-link">← All Recipes</Link>
       <div className="page-head">
-        <h1 className="page-title">This Week</h1>
+        <h1 className="page-title">Meal Plan</h1>
         {planned.length > 0 && (
           <button type="button" className="link-btn link-btn--danger" onClick={clearAll}>
             Clear Plan
@@ -90,7 +90,7 @@ export default function ThisWeek() {
       {planned.length === 0 ? (
         <div className="empty">
           <p className="muted">
-            Nothing planned yet. Open a recipe and tap <strong>Add to This Week</strong>, then
+            Nothing planned yet. Open a recipe and tap <strong>Add to Meal Plan</strong>, then
             send the whole week’s ingredients to your shopping list in one go.
           </p>
           <Link to="/" className="btn-primary" style={{ display: 'block', textAlign: 'center' }}>
@@ -129,7 +129,7 @@ export default function ThisWeek() {
                   type="button"
                   className="plan-item__remove"
                   onClick={() => remove(recipe.id)}
-                  aria-label={`Remove ${recipe.title} From This Week`}
+                  aria-label={`Remove ${recipe.title} From Meal Plan`}
                 >
                   ×
                 </button>
@@ -174,7 +174,7 @@ export default function ThisWeek() {
             ))}
           </section>
 
-          <div className="shopping-actions">
+          <div className="shopping-actions shopping-actions--sticky">
             <button
               type="button"
               className="btn-primary btn-reminders"

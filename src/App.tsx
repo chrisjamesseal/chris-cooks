@@ -6,7 +6,7 @@ import RecipeDetail from './pages/RecipeDetail'
 import ThisWeek from './pages/ThisWeek'
 import Changelog from './pages/Changelog'
 import { getPlan } from './lib/plan'
-import { CalendarIcon } from './components/icons'
+import { CalendarIcon, PlusIcon } from './components/icons'
 import './App.css'
 
 /**
@@ -50,12 +50,12 @@ function AppHeader() {
         >
           💪
         </Link>
-        <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="This Week">
+        <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="Meal Plan">
           <CalendarIcon />
           {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
         </Link>
         <Link to="/add" className="btn-primary btn-primary--sm app-head__add" aria-label="Add Recipe">
-          ＋
+          <PlusIcon />
         </Link>
       </div>
     </header>
