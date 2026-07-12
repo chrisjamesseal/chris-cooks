@@ -6,10 +6,66 @@ import { getPlan } from '../lib/plan'
 import { videoInfoFromUrl } from '../lib/video'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
-import type { Recipe } from '../types'
+import type { Nutrition as NutritionInfo, Recipe } from '../types'
 
-const LIGHT_KCAL = 500
-const HIGH_PROTEIN_G = 25
+/**
+ * Health browse categories: each pulls from real per-serving nutrition data.
+ * Sides and desserts are excluded where a category is about picking a meal.
+ */
+type HealthCategory = {
+  title: string
+  mealsOnly: boolean
+  match: (n: NutritionInfo) => boolean
+  sort: (a: Recipe, b: Recipe) => number
+  note: (n: NutritionInfo) => string
+}
+
+const kcal = (n: NutritionInfo) => n.calories ?? 0
+
+const HEALTH_CATEGORIES: HealthCategory[] = [
+  {
+    title: '💪 Highest Protein',
+    mealsOnly: false,
+    match: (n) => (n.proteinG ?? 0) >= 25,
+    sort: (a, b) => (b.nutrition!.proteinG ?? 0) - (a.nutrition!.proteinG ?? 0),
+    note: (n) => `${Math.round(n.proteinG!)}g protein`,
+  },
+  {
+    title: '🥗 Light Meals (Under 500 kcal)',
+    mealsOnly: true,
+    match: (n) => n.calories !== undefined && n.calories < 500,
+    sort: (a, b) => kcal(a.nutrition!) - kcal(b.nutrition!),
+    note: (n) => `${Math.round(n.calories!)} kcal`,
+  },
+  {
+    title: '🍞 Low Carb (Under 30g)',
+    mealsOnly: true,
+    match: (n) => n.carbsG !== undefined && n.carbsG < 30,
+    sort: (a, b) => (a.nutrition!.carbsG ?? 0) - (b.nutrition!.carbsG ?? 0),
+    note: (n) => `${Math.round(n.carbsG!)}g carbs`,
+  },
+  {
+    title: '🌾 High Fibre (8g+)',
+    mealsOnly: false,
+    match: (n) => (n.fiberG ?? 0) >= 8,
+    sort: (a, b) => (b.nutrition!.fiberG ?? 0) - (a.nutrition!.fiberG ?? 0),
+    note: (n) => `${Math.round(n.fiberG!)}g fibre`,
+  },
+  {
+    title: '🫀 Low Saturated Fat (5g or Less)',
+    mealsOnly: true,
+    match: (n) => n.satFatG !== undefined && n.satFatG <= 5,
+    sort: (a, b) => (a.nutrition!.satFatG ?? 0) - (b.nutrition!.satFatG ?? 0),
+    note: (n) => `${Math.round(n.satFatG!)}g sat fat`,
+  },
+  {
+    title: '🍬 Low Sugar (Under 8g)',
+    mealsOnly: true,
+    match: (n) => n.sugarG !== undefined && n.sugarG < 8,
+    sort: (a, b) => (a.nutrition!.sugarG ?? 0) - (b.nutrition!.sugarG ?? 0),
+    note: (n) => `${Math.round(n.sugarG!)}g sugar`,
+  },
+]
 
 function Strip({ title, recipes, note }: { title: string; recipes: Recipe[]; note: (r: Recipe) => string }) {
   if (recipes.length === 0) return null
@@ -62,15 +118,7 @@ export default function Nutrition() {
   const sum = (get: (r: Recipe) => number | undefined) =>
     Math.round(plannedWithData.reduce((acc, r) => acc + (get(r) ?? 0), 0))
 
-  const lightMeals = withNutrition
-    .filter((r) => (r.nutrition!.calories ?? Infinity) < LIGHT_KCAL && r.mainCategory !== 'Side' && r.mainCategory !== 'Dessert')
-    .sort((a, b) => (a.nutrition!.calories ?? 0) - (b.nutrition!.calories ?? 0))
-    .slice(0, 10)
-
-  const proteinPicks = recipes
-    .filter((r) => (r.nutrition?.proteinG ?? 0) >= HIGH_PROTEIN_G)
-    .sort((a, b) => (b.nutrition!.proteinG ?? 0) - (a.nutrition!.proteinG ?? 0))
-    .slice(0, 10)
+  const isMeal = (r: Recipe) => r.mainCategory !== 'Side' && r.mainCategory !== 'Dessert'
 
   // Recipes whose original source page might still hold nutrition data.
   const lookupCandidates = recipes.filter(
@@ -110,67 +158,60 @@ export default function Nutrition() {
     <div>
       <h1 className="page-title">Nutrition</h1>
 
-      {planned.length > 0 && (
+      {HEALTH_CATEGORIES.map((cat) => (
+        <Strip
+          key={cat.title}
+          title={cat.title}
+          recipes={recipes
+            .filter((r) => r.nutrition && (!cat.mealsOnly || isMeal(r)) && cat.match(r.nutrition))
+            .sort(cat.sort)
+            .slice(0, 10)}
+          note={(r) => cat.note(r.nutrition!)}
+        />
+      ))}
+
+      {plannedWithData.length > 0 && (
         <section className="card nutri-plan">
           <h2 className="nutri-plan__title">🗓 Your Meal Plan</h2>
-          {plannedWithData.length > 0 ? (
-            <>
-              <div className="nutri-totals">
-                <div className="nutri-total">
-                  <span className="nutri-total__num">{sum((r) => r.nutrition!.calories)}</span>
-                  <span className="nutri-total__label">kcal</span>
-                </div>
-                <div className="nutri-total">
-                  <span className="nutri-total__num">{sum((r) => r.nutrition!.proteinG)}g</span>
-                  <span className="nutri-total__label">protein</span>
-                </div>
-                <div className="nutri-total">
-                  <span className="nutri-total__num">{sum((r) => r.nutrition!.carbsG)}g</span>
-                  <span className="nutri-total__label">carbs</span>
-                </div>
-                <div className="nutri-total">
-                  <span className="nutri-total__num">{sum((r) => r.nutrition!.fatG)}g</span>
-                  <span className="nutri-total__label">fat</span>
-                </div>
-              </div>
-              <p className="muted nutri-plan__note">
-                Per serving, across the {plannedWithData.length} planned{' '}
-                {plannedWithData.length === 1 ? 'meal' : 'meals'} with nutrition info
-                {planned.length > plannedWithData.length
-                  ? ` (${planned.length - plannedWithData.length} without data not counted)`
-                  : ''}
-                .
-              </p>
-              <ul className="nutri-meals">
-                {plannedWithData.map((r) => (
-                  <li key={r.id}>
-                    <Link to={`/recipe/${r.id}`}>{r.title}</Link>
-                    <span>
-                      {Math.round(r.nutrition!.calories!)} kcal
-                      {r.nutrition!.proteinG ? ` · ${Math.round(r.nutrition!.proteinG)}g protein` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="muted nutri-plan__note">
-              None of your planned meals have nutrition info yet.
-            </p>
-          )}
+          <div className="nutri-totals">
+            <div className="nutri-total">
+              <span className="nutri-total__num">{sum((r) => r.nutrition!.calories)}</span>
+              <span className="nutri-total__label">kcal</span>
+            </div>
+            <div className="nutri-total">
+              <span className="nutri-total__num">{sum((r) => r.nutrition!.proteinG)}g</span>
+              <span className="nutri-total__label">protein</span>
+            </div>
+            <div className="nutri-total">
+              <span className="nutri-total__num">{sum((r) => r.nutrition!.carbsG)}g</span>
+              <span className="nutri-total__label">carbs</span>
+            </div>
+            <div className="nutri-total">
+              <span className="nutri-total__num">{sum((r) => r.nutrition!.fatG)}g</span>
+              <span className="nutri-total__label">fat</span>
+            </div>
+          </div>
+          <p className="muted nutri-plan__note">
+            Per serving, across the {plannedWithData.length} planned{' '}
+            {plannedWithData.length === 1 ? 'meal' : 'meals'} with nutrition info
+            {planned.length > plannedWithData.length
+              ? ` (${planned.length - plannedWithData.length} without data not counted)`
+              : ''}
+            .
+          </p>
+          <ul className="nutri-meals">
+            {plannedWithData.map((r) => (
+              <li key={r.id}>
+                <Link to={`/recipe/${r.id}`}>{r.title}</Link>
+                <span>
+                  {Math.round(r.nutrition!.calories!)} kcal
+                  {r.nutrition!.proteinG ? ` · ${Math.round(r.nutrition!.proteinG)}g protein` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
-
-      <Strip
-        title="💪 Highest Protein"
-        recipes={proteinPicks}
-        note={(r) => `${Math.round(r.nutrition!.proteinG!)}g protein`}
-      />
-      <Strip
-        title={`🥗 Light Meals (Under ${LIGHT_KCAL} kcal)`}
-        recipes={lightMeals}
-        note={(r) => `${Math.round(r.nutrition!.calories!)} kcal`}
-      />
 
       <section className="card backup-card">
         <h2 className="backup-card__title">Nutrition Coverage</h2>

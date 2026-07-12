@@ -4,6 +4,15 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.7.0',
+    title: 'A proper nutrition hub',
+    notes: [
+      'The Nutrition tab now leads with six health categories built from real data: Highest Protein, Light Meals, Low Carb, High Fibre, Low Saturated Fat and Low Sugar.',
+      'The meal plan summary is still there when you have meals planned, just no longer the main event.',
+      'The ❤️ and 💪 buttons are gone from the header. Favourites now lives at the start of the category pills, and protein browsing lives in Nutrition.',
+    ],
+  },
+  {
     version: '1.6.0',
     title: 'Nutrition front and centre',
     notes: [
