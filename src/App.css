@@ -46,10 +46,44 @@
 .app-main {
   flex: 1;
   padding: 16px;
+  padding-bottom: calc(78px + env(safe-area-inset-bottom));
   max-width: 640px;
   width: 100%;
   margin: 0 auto;
 }
+
+/* Bottom navigation */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+.bottom-nav__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 0;
+  border-radius: 10px;
+}
+.bottom-nav__tab:active { opacity: 0.7; }
+.bottom-nav__tab--active { color: var(--green-dark); }
+.nav-icon { width: 22px; height: 22px; display: block; }
+.bottom-nav__icon-wrap { position: relative; display: block; }
+.bottom-nav__icon-wrap .week-btn__badge { top: -5px; right: -10px; }
 
 /* Typography & shared bits */
 .page-title {
@@ -378,6 +412,35 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   margin: 12px 0 6px;
 }
 
+/* Nutrition page */
+.nutri-plan { display: grid; gap: 10px; margin-bottom: 8px; }
+.nutri-plan__title { font-size: 15px; font-weight: 700; margin: 0; }
+.nutri-totals { display: flex; gap: 8px; }
+.nutri-total {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 4px;
+}
+.nutri-total__num { font-size: 17px; font-weight: 800; color: var(--green-dark); }
+.nutri-total__label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+.nutri-plan__note { margin: 0; font-size: 13px; }
+.nutri-meals { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.nutri-meals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.nutri-meals li span { color: var(--muted); white-space: nowrap; }
+.recent-card__note { font-size: 12px; font-weight: 600; color: var(--green-dark); }
+
 /* Backup card */
 .backup-card { margin-top: 28px; display: grid; gap: 10px; }
 .backup-card__title { font-size: 15px; font-weight: 700; margin: 0; }
@@ -549,7 +612,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(86px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   white-space: nowrap;
   max-width: calc(100vw - 32px);
@@ -624,8 +687,8 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .shopping-actions { margin-top: 14px; }
 .shopping-actions--sticky {
   position: sticky;
-  bottom: 0;
-  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(58px + env(safe-area-inset-bottom));
+  padding: 10px 0;
   margin-top: 4px;
   background: linear-gradient(to top, var(--bg) 75%, rgba(246, 248, 247, 0));
 }

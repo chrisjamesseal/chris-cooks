@@ -280,6 +280,7 @@ export default function Home() {
                         <span className="recipe-card__title">{recipe.title}</span>
                         <span className="recipe-card__meta">
                           {recipe.mainCategory}
+                          {recipe.nutrition?.calories ? ` · ${Math.round(recipe.nutrition.calories)} kcal` : ''}
                           {score > 0 && (
                             <span className="card-fridge"> · Uses {score} of Your {terms.length}</span>
                           )}

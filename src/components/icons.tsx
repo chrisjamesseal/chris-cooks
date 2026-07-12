@@ -25,6 +25,38 @@ export function HeartIcon({ className = 'heart-icon' }: { className?: string }) 
   )
 }
 
+/** Open book for the Recipes tab. */
+export function BookIcon() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 5.5C10.4 4 8 3.5 5 3.5c-.9 0-1.7.1-2.5.25V19c.8-.15 1.6-.25 2.5-.25 3 0 5.4.5 7 2 1.6-1.5 4-2 7-2 .9 0 1.7.1 2.5.25V3.75A13 13 0 0 0 19 3.5c-3 0-5.4.5-7 2z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <line x1="12" y1="6" x2="12" y2="20" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Apple for the Nutrition tab. */
+export function NutritionIcon() {
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 8.5c-1-.8-2.3-1.3-3.6-1.1C5.6 7.7 3.7 10.4 4 13.6c.4 3.7 2.8 7 5.3 7 1 0 1.8-.5 2.7-.5s1.7.5 2.7.5c2.5 0 4.9-3.3 5.3-7 .3-3.2-1.6-5.9-4.4-6.2-1.3-.2-2.6.3-3.6 1.1z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path d="M12 8c0-2.2 1.4-4 3.5-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 /** Centered plus for the header add button (the ＋ glyph sits off-centre). */
 export function PlusIcon() {
   return (

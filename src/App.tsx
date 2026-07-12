@@ -4,9 +4,10 @@ import AddRecipe from './pages/AddRecipe'
 import EditRecipe from './pages/EditRecipe'
 import RecipeDetail from './pages/RecipeDetail'
 import ThisWeek from './pages/ThisWeek'
+import Nutrition from './pages/Nutrition'
 import Changelog from './pages/Changelog'
 import { getPlan } from './lib/plan'
-import { CalendarIcon, PlusIcon } from './components/icons'
+import { BookIcon, CalendarIcon, NutritionIcon, PlusIcon } from './components/icons'
 import './App.css'
 
 /**
@@ -16,10 +17,8 @@ import './App.css'
  */
 function AppHeader() {
   const [params] = useSearchParams()
-  useLocation() // subscribe to navigation so the plan badge re-reads localStorage
   const fav = params.get('fav') === '1'
   const protein = params.get('protein') === '1'
-  const planCount = getPlan().length
 
   const filterLink = (key: 'fav' | 'protein', on: boolean) => {
     const next = new URLSearchParams()
@@ -50,15 +49,38 @@ function AppHeader() {
         >
           💪
         </Link>
-        <Link to="/plan" className="btn-ghost btn-ghost--sm week-btn" aria-label="Meal Plan">
-          <CalendarIcon />
-          {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
-        </Link>
         <Link to="/add" className="btn-primary btn-primary--sm app-head__add" aria-label="Add Recipe">
           <PlusIcon />
         </Link>
       </div>
     </header>
+  )
+}
+
+/** Fixed bottom navigation: the app's three main places, one tap away. */
+function BottomNav() {
+  const { pathname } = useLocation()
+  const planCount = getPlan().length
+  const active = pathname.startsWith('/plan') ? 'plan' : pathname.startsWith('/nutrition') ? 'nutrition' : 'recipes'
+
+  return (
+    <nav className="bottom-nav">
+      <Link to="/" className={`bottom-nav__tab${active === 'recipes' ? ' bottom-nav__tab--active' : ''}`}>
+        <BookIcon />
+        Recipes
+      </Link>
+      <Link to="/plan" className={`bottom-nav__tab${active === 'plan' ? ' bottom-nav__tab--active' : ''}`}>
+        <span className="bottom-nav__icon-wrap">
+          <CalendarIcon className="nav-icon" />
+          {planCount > 0 && <span className="week-btn__badge">{planCount}</span>}
+        </span>
+        Meal Plan
+      </Link>
+      <Link to="/nutrition" className={`bottom-nav__tab${active === 'nutrition' ? ' bottom-nav__tab--active' : ''}`}>
+        <NutritionIcon />
+        Nutrition
+      </Link>
+    </nav>
   )
 }
 
@@ -73,9 +95,11 @@ function App() {
           <Route path="/recipe/:id" element={<RecipeDetail />} />
           <Route path="/recipe/:id/edit" element={<EditRecipe />} />
           <Route path="/plan" element={<ThisWeek />} />
+          <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/changelog" element={<Changelog />} />
         </Routes>
       </main>
+      <BottomNav />
     </HashRouter>
   )
 }

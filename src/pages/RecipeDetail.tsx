@@ -18,6 +18,7 @@ import {
 } from '../lib/ai'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { healthierTips } from '../lib/healthier'
+import { fetchNutritionFromSource } from '../lib/import'
 import { inPlan, togglePlan } from '../lib/plan'
 import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
@@ -200,6 +201,41 @@ export default function RecipeDetail() {
     const iv = setInterval(() => setNowTick(Date.now()), 500)
     return () => clearInterval(iv)
   }, [timer])
+
+  // Quiet nutrition backfill: if the recipe has a source page but no nutrition,
+  // check the page's structured data once. Values are never guessed.
+  useEffect(() => {
+    if (!recipe || recipe.nutrition?.calories) return
+    const url = recipe.source?.url
+    if (!url || videoInfoFromUrl(url)) return
+    const TRIED_KEY = 'chris-cooks:nutriTried'
+    let tried: string[] = []
+    try {
+      tried = JSON.parse(localStorage.getItem(TRIED_KEY) ?? '[]')
+    } catch {
+      tried = []
+    }
+    if (tried.includes(recipe.id)) return
+    let cancelled = false
+    fetchNutritionFromSource(url)
+      .then(async (nutrition) => {
+        try {
+          localStorage.setItem(TRIED_KEY, JSON.stringify([...tried, recipe.id].slice(-500)))
+        } catch {
+          // best-effort dedupe
+        }
+        if (cancelled || !nutrition) return
+        const updated: Recipe = { ...recipe, nutrition }
+        await saveRecipe(updated)
+        setRecipe(updated)
+        flash('Nutrition Added From the Original Recipe ✓')
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe?.id, recipe?.nutrition])
 
   useEffect(() => {
     if (timer && nowTick >= timer.endsAt) {
