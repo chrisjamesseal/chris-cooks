@@ -4,6 +4,14 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.3.1',
+    title: 'A tidier home screen',
+    notes: [
+      'The This Week button is now a neat calendar icon with a meal-count badge, so the header fits comfortably.',
+      'Lighter remove button on This Week cards.',
+    ],
+  },
+  {
     version: '1.3.0',
     title: 'Your week, your favourites, your backup',
     notes: [
