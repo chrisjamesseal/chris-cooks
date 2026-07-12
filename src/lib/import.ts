@@ -1,5 +1,5 @@
 import type { Ingredient, MainCategory, Nutrition, Recipe, Step } from '../types'
-import { newId, parseIngredient, tidyRecipeTitle } from './recipe'
+import { dessertCategoryOverride, newId, parseIngredient, tidyCuisine, tidyRecipeTitle } from './recipe'
 
 /**
  * Recipe import: fetch a page and pull structured recipe data out of its
@@ -82,8 +82,8 @@ function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
     title,
     image: firstImage(node.image),
     source: { type: 'url', url: sourceUrl },
-    mainCategory: mapCategory(firstString(node.recipeCategory)),
-    cuisine: cleanText(firstString(node.recipeCuisine)) || undefined,
+    mainCategory: dessertCategoryOverride(title) ? 'Dessert' : mapCategory(firstString(node.recipeCategory)),
+    cuisine: tidyCuisine(cleanText(firstString(node.recipeCuisine))),
     servings: parseYield(node.recipeYield) ?? 1,
     times: {
       prep: formatDuration(node.prepTime),
@@ -563,7 +563,7 @@ async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): P
       mainCategory: MAIN_CATEGORIES.includes(data.category as MainCategory)
         ? (data.category as MainCategory)
         : 'Dinner',
-      cuisine: data.cuisine ? cleanText(String(data.cuisine)) || undefined : undefined,
+      cuisine: tidyCuisine(data.cuisine ? cleanText(String(data.cuisine)) : undefined),
       servings:
         typeof data.servings === 'number' && Number.isFinite(data.servings) && data.servings >= 1
           ? Math.round(data.servings)

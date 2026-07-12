@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.4.2',
+    title: 'Smarter weekly shop & cleaner filters',
+    notes: [
+      'This Week now shows every ingredient from your planned meals, grouped by recipe. Tick what you already have and only the rest goes to your shopping list.',
+      'Pick a category and the other pills step aside until you tap All (or the category again).',
+      'Cakes can no longer masquerade as lunch: titles like "Victoria Sandwich" are recognised as desserts on import, and existing recipes get corrected.',
+      'Cleaned up the cuisine filters (one had a stray web address in it).',
+      'Header buttons are now the same size with proper press feedback, Clear Plan is red and lines up with the title, and the search hint is shorter.',
+    ],
+  },
+  {
     version: '1.4.1',
     title: 'One header to rule them all',
     notes: [

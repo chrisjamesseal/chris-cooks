@@ -25,6 +25,39 @@ const TITLE_KEEP_UPPER = new Set(['bbq', 'blt'])
 const TITLE_HYPE =
   /^(?:the\s+|my\s+|this\s+|these\s+|our\s+)?(?:absolute\s+)?(?:best(?:\s+ever)?|easiest|quickest|simplest|ultimate|perfect|amazing|incredible|unbelievable|insanely\s+good|viral|famous|legendary|epic|to\s+die\s+for|must[- ]try)\s+/i
 
+/**
+ * Titles that are unambiguously desserts, used to correct miscategorised
+ * imports ("Classic Victoria Sandwich" is a cake, whatever the site says).
+ * Deliberately tight so savoury dishes and breakfast bakes are never caught.
+ */
+const DESSERT_TITLE_RE =
+  /\b(cakes?|sponge|victoria sandwich|cheesecake|brownies?|banoffee|pavlova|trifle|tiramisu|fudge|meringues?|profiteroles?|eclairs?|ice cream|sorbet)\b/i
+
+export function dessertCategoryOverride(title: string): boolean {
+  return DESSERT_TITLE_RE.test(title)
+}
+
+/**
+ * Clean a scraped cuisine value: sites emit schema.org diet URLs, comma
+ * lists and stray fragments. Keep the first plausible cuisine word or drop it.
+ */
+export function tidyCuisine(raw: string | undefined): string | undefined {
+  if (!raw) return undefined
+  for (const part of raw.split(',')) {
+    const c = part.trim().toLowerCase()
+    if (!c || c.includes('http') || c.includes('/') || c.includes('&')) continue
+    if (/^(brunch|international|western|fusion|other|salads?|slaws?)$/.test(c)) continue
+    if (c.length > 20 || !/^[a-z][a-z\s-]*$/.test(c)) continue
+    // "north american" → "american", "british indian restaurant" → "indian"
+    if (c.includes('american')) return 'american'
+    if (c.includes('indian')) return 'indian'
+    if (c.includes('thai')) return 'thai'
+    if (c.includes('italian')) return 'italian'
+    return c
+  }
+  return undefined
+}
+
 export function tidyRecipeTitle(raw: string): string {
   let t = raw
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu, ' ')
