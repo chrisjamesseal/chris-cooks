@@ -67,6 +67,7 @@ export default function ThisWeek() {
 
   const allIngredients = planned.flatMap((r) => r.ingredients)
   const remaining = allIngredients.filter((i) => !have.has(i.id))
+  const totalKcal = Math.round(planned.reduce((acc, r) => acc + (r.nutrition?.calories ?? 0), 0))
 
   function shopAll() {
     if (remaining.length === 0) return
@@ -101,6 +102,7 @@ export default function ThisWeek() {
         <>
           <p className="scale-note">
             {planned.length} {planned.length === 1 ? 'meal' : 'meals'} · {allIngredients.length} ingredients
+            {totalKcal > 0 ? ` · ${totalKcal} kcal` : ''}
           </p>
           <ul className="recipe-list">
             {planned.map((recipe) => (
@@ -121,6 +123,7 @@ export default function ThisWeek() {
                     <span className="recipe-card__title">{recipe.title}</span>
                     <span className="recipe-card__meta">
                       {recipe.ingredients.length} ingredients
+                      {recipe.nutrition?.calories ? ` · ${Math.round(recipe.nutrition.calories)} kcal` : ''}
                       {recipe.times.cook ? ` · ${recipe.times.cook}` : ''}
                     </span>
                   </span>

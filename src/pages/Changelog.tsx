@@ -4,6 +4,16 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.6.0',
+    title: 'Nutrition front and centre',
+    notes: [
+      'New bottom navigation: Recipes, Meal Plan and Nutrition are one tap away from anywhere.',
+      'New Nutrition page: your meal plan totted up (calories, protein, carbs, fat per serving), plus Highest Protein and Light Meals rows to browse.',
+      'Calories now show on recipe cards and meal plan entries whenever they are known.',
+      'Find Missing Nutrition: the app can check a recipe\'s original source page and pull in the nutrition it states. Values are only ever taken from the source, never guessed. Opening a recipe without nutrition quietly checks once too.',
+    ],
+  },
+  {
     version: '1.5.0',
     title: 'Meal Plan upgrades & recipes in more than one category',
     notes: [

@@ -293,6 +293,32 @@ async function fetchText(url: string, timeoutMs = 15000): Promise<string> {
 export class ImportError extends Error {}
 
 /**
+ * Look up nutrition for an existing recipe by re-reading its source page's
+ * schema.org data. Returns null unless the page itself declares nutrition,
+ * so values are never guessed. Used to backfill recipes saved without it.
+ */
+export async function fetchNutritionFromSource(url: string): Promise<Nutrition | null> {
+  if (detectVideoSource(url)) return null
+  const target = normalizeUrl(url)
+  for (const attempt of [target, ...PROXIES.map((p) => p(target))]) {
+    let html: string
+    try {
+      html = await fetchText(attempt)
+    } catch {
+      continue
+    }
+    const nodes: Json[] = []
+    for (const block of extractJsonLdBlocks(html)) collectRecipeNodes(block, nodes)
+    for (const node of nodes) {
+      const nutrition = mapNutrition(node.nutrition)
+      if (nutrition?.calories) return nutrition
+    }
+    return null // page reached but it declares no nutrition
+  }
+  return null
+}
+
+/**
  * Optional AI cleanup: when VITE_AI_CLEANUP_URL is configured (a serverless
  * proxy holding the API key), scraped text is sent through it to fix odd
  * formatting/typos. No-op — and never fails the import — when unset.
