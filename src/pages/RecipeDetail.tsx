@@ -300,7 +300,7 @@ export default function RecipeDetail() {
   function handleTogglePlan() {
     const nowIn = togglePlan(loaded.id)
     setPlanned(nowIn)
-    flash(nowIn ? 'Added to This Week 🗓' : 'Removed From This Week')
+    flash(nowIn ? 'Added to This Week ✓' : 'Removed From Plan')
   }
 
   async function saveNotes() {
@@ -420,7 +420,7 @@ export default function RecipeDetail() {
           <span className="chip" key={t as string}>{t}</span>
         ))}
         {(recipe.nutrition?.proteinG ?? 0) >= 25 && (
-          <span className="chip chip--protein">💪 High Protein</span>
+          <Link to="/?protein=1" className="chip chip--protein">💪 High Protein</Link>
         )}
       </div>
 

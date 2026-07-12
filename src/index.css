@@ -11,7 +11,10 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body, #root { margin: 0; height: 100%; }
+/* #root must grow with content (not be pinned to 100%) or position: sticky
+   inside it stops at the first viewport-height. */
+html, body { margin: 0; height: 100%; }
+#root { margin: 0; }
 body {
   font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--ink);
