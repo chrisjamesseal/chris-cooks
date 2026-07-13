@@ -1,4 +1,4 @@
-import type { Recipe } from '../types'
+import type { Nutrition, Recipe } from '../types'
 
 // AI-assisted "make it healthier". Like import cleanup, this calls the optional
 // serverless worker (VITE_AI_CLEANUP_URL) that holds the API key server-side —
@@ -26,6 +26,48 @@ export function aiEndpoint(): string | undefined {
 }
 
 export class AiError extends Error {}
+
+/**
+ * Estimate per-serving nutrition from a recipe's ingredients when the source
+ * doesn't publish any. Returns null (never throws for the caller to swallow)
+ * when the AI helper isn't configured or can't produce a usable estimate. The
+ * result is always flagged as an estimate by the caller.
+ */
+export async function estimateNutrition(recipe: Recipe): Promise<Nutrition | null> {
+  const endpoint = aiEndpoint()
+  if (!endpoint) return null
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'estimate-nutrition',
+        title: recipe.title,
+        servings: recipe.servings,
+        ingredients: recipe.ingredients.map((i) => i.raw),
+      }),
+    })
+  } catch {
+    return null
+  }
+  if (!res.ok) return null
+  let data: Record<string, number | null>
+  try {
+    data = (await res.json()) as Record<string, number | null>
+  } catch {
+    return null
+  }
+  const keys: (keyof Nutrition)[] = [
+    'calories', 'proteinG', 'carbsG', 'fatG', 'satFatG', 'sugarG', 'fiberG', 'sodiumMg',
+  ]
+  const nutrition: Nutrition = {}
+  for (const k of keys) {
+    const v = data[k]
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) nutrition[k] = Math.round(v * 10) / 10
+  }
+  return nutrition.calories ? nutrition : null
+}
 
 export async function makeHealthier(recipe: Recipe, priority: HealthPriority): Promise<HealthierResult> {
   const endpoint = aiEndpoint()

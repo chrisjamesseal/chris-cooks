@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.8.0',
+    title: 'Weight-loss nutrition & tidier cards',
+    notes: [
+      'The Nutrition tab is now weight-loss focused: Weight-Loss Winners (30g+ protein, under 600 kcal), Most Protein per Calorie, Low-Calorie Snacks, plus the existing protein, fibre, light and low-carb rows.',
+      'A Healthy Eating Tips row with practical habits for losing weight.',
+      'Missing nutrition? If the AI helper is set up, tap Estimate to fill it in from the ingredients. Estimates are clearly marked with a ≈ so you know they are not from the original recipe.',
+      'On a recipe, the Favourite and Add to Meal Plan buttons now stay pinned above the bottom bar so they are always in reach.',
+      'Tidier recipe cards (heart and calendar side by side), a square add button, and neater spacing on the recipe page.',
+    ],
+  },
+  {
     version: '1.7.1',
     title: 'Calmer home screen',
     notes: [

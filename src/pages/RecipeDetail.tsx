@@ -11,6 +11,7 @@ import {
 } from '../lib/recipe'
 import {
   aiEndpoint,
+  estimateNutrition,
   HEALTH_PRIORITIES,
   makeHealthier,
   type HealthierResult,
@@ -159,6 +160,8 @@ export default function RecipeDetail() {
   const [planned, setPlanned] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesDraft, setNotesDraft] = useState('')
+  const [estimating, setEstimating] = useState(false)
+  const [estimateError, setEstimateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) setPlanned(inPlan(id))
@@ -348,6 +351,26 @@ export default function RecipeDetail() {
     flash('Notes Saved ✓')
   }
 
+  async function estimateNutritionForRecipe() {
+    setEstimating(true)
+    setEstimateError(null)
+    try {
+      const nutrition = await estimateNutrition(loaded)
+      if (!nutrition) {
+        setEstimateError('Could not estimate from these ingredients. You can add it by hand via Edit.')
+        return
+      }
+      const updated: Recipe = { ...loaded, nutrition, nutritionEstimated: true }
+      await saveRecipe(updated)
+      setRecipe(updated)
+      flash('Nutrition Estimated ✓')
+    } catch {
+      setEstimateError('Something went wrong. Please try again.')
+    } finally {
+      setEstimating(false)
+    }
+  }
+
   function flash(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 2200)
@@ -461,26 +484,6 @@ export default function RecipeDetail() {
         {(recipe.nutrition?.proteinG ?? 0) >= 25 && (
           <Link to="/?protein=1" className="chip chip--protein">💪 High Protein</Link>
         )}
-      </div>
-
-      <div className="recipe-actions">
-        <button
-          type="button"
-          className={`recipe-action${recipe.favorite ? ' recipe-action--fav' : ''}`}
-          onClick={toggleFavorite}
-          aria-pressed={!!recipe.favorite}
-        >
-          {recipe.favorite ? '♥ Favourite' : '♡ Favourite'}
-        </button>
-        <button
-          type="button"
-          className={`recipe-action${planned ? ' recipe-action--on' : ''}`}
-          onClick={handleTogglePlan}
-          aria-pressed={planned}
-        >
-          <CalendarIcon className="calendar-icon calendar-icon--inline" />
-          {planned ? ' In Meal Plan ✓' : ' Add to Meal Plan'}
-        </button>
       </div>
 
       {video && !recipe.image && (
@@ -655,21 +658,40 @@ export default function RecipeDetail() {
           )}
         </h2>
         {nutritionRows.length > 0 ? (
-          <dl className="nutrition-table">
-            {nutritionRows.map(({ key, label, unit }) => (
-              <div className="nutrition-row" key={key}>
-                <dt>{label}</dt>
-                <dd>
-                  {recipe.nutrition![key]}
-                  {unit}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <>
+            <dl className="nutrition-table">
+              {nutritionRows.map(({ key, label, unit }) => (
+                <div className="nutrition-row" key={key}>
+                  <dt>{label}</dt>
+                  <dd>
+                    {recipe.nutrition![key]}
+                    {unit}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {recipe.nutritionEstimated && (
+              <p className="scale-note nutri-estimate-note">≈ Estimated from the ingredients, not from the original recipe.</p>
+            )}
+          </>
         ) : (
-          <p className="scale-note">
-            No nutrition info yet, add it via <Link to={`/recipe/${recipe.id}/edit`}>Edit</Link>.
-          </p>
+          <div className="nutri-empty">
+            <p className="scale-note">No nutrition info yet.</p>
+            {aiOn && (
+              <button
+                type="button"
+                className="btn-ghost btn-estimate"
+                onClick={estimateNutritionForRecipe}
+                disabled={estimating}
+              >
+                {estimating ? 'Estimating…' : '✨ Estimate Nutrition'}
+              </button>
+            )}
+            {estimateError && <p className="form-error" role="alert">{estimateError}</p>}
+            <p className="muted nutri-empty__hint">
+              Or add it by hand via <Link to={`/recipe/${recipe.id}/edit`}>Edit</Link>.
+            </p>
+          </div>
         )}
 
         <div className="healthier card">
@@ -759,6 +781,26 @@ export default function RecipeDetail() {
         <Link to={`/recipe/${recipe.id}/edit`} className="btn-primary">
           Edit
         </Link>
+      </div>
+
+      <div className="recipe-actionbar">
+        <button
+          type="button"
+          className={`recipe-action${recipe.favorite ? ' recipe-action--fav' : ''}`}
+          onClick={toggleFavorite}
+          aria-pressed={!!recipe.favorite}
+        >
+          {recipe.favorite ? '♥ Favourite' : '♡ Favourite'}
+        </button>
+        <button
+          type="button"
+          className={`recipe-action${planned ? ' recipe-action--on' : ''}`}
+          onClick={handleTogglePlan}
+          aria-pressed={planned}
+        >
+          <CalendarIcon className="calendar-icon calendar-icon--inline" />
+          {planned ? ' In Meal Plan ✓' : ' Add to Meal Plan'}
+        </button>
       </div>
 
       {toast && <div className="toast" role="status">{toast}</div>}
