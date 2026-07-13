@@ -15,6 +15,8 @@ export type Recipe = {
   ingredients: Ingredient[]
   steps: Step[]
   nutrition?: Nutrition
+  /** True when the nutrition came from an AI estimate rather than the source recipe. */
+  nutritionEstimated?: boolean
   favorite?: boolean
   notes?: string
   cookedCount?: number
