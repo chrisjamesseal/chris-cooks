@@ -4,6 +4,19 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.11.0',
+    title: 'Tidier action bar and a proper unit toggle',
+    notes: [
+      'Delete moved off the sticky bar to its own button at the bottom of the page, so it is out of the way while cooking.',
+      'Favourite is now a heart icon in the sticky bar, turning red when a recipe is favourited.',
+      'Add to Meal Plan now always fits on one line in the sticky bar.',
+      'Tapping the version number a second time (from the changelog) now just takes you back, instead of reopening the changelog.',
+      'Bolder, clearer arrows on every collapsible section.',
+      'Nutrition is now collapsible too, and closed by default.',
+      'Metric and Imperial are now one sliding toggle instead of two separate buttons, with more breathing room above it.',
+    ],
+  },
+  {
     version: '1.10.0',
     title: 'Unit conversion, accordions, and a tidier action bar',
     notes: [

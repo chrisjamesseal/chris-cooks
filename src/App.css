@@ -112,8 +112,9 @@
 .recipe-section summary.section-title::-webkit-details-marker { display: none; }
 .recipe-section summary.section-title::marker { content: ''; }
 .recipe-section__chevron {
+  width: 18px;
+  height: 18px;
   color: var(--muted);
-  font-size: 13px;
   transition: transform 0.15s;
   flex-shrink: 0;
   margin-left: 8px;
@@ -121,7 +122,30 @@
 .recipe-section[open] > summary .recipe-section__chevron { transform: rotate(180deg); }
 .recipe-section__body { padding-top: 2px; }
 
-.unit-toggle { display: flex; gap: 8px; margin: -4px 0 12px; }
+.unit-toggle {
+  display: flex;
+  gap: 3px;
+  margin: 20px 0 14px;
+  padding: 3px;
+  background: var(--line);
+  border-radius: 11px;
+}
+.unit-toggle__opt {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.unit-toggle__opt--active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
 
 .source-link a {
   word-break: break-all;
@@ -448,6 +472,7 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   font-weight: 600;
   padding: 10px 12px;
   border-radius: 12px;
+  white-space: nowrap;
 }
 .recipe-action--on {
   background: var(--green);
@@ -469,12 +494,23 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   text-decoration: none;
 }
 .recipe-action--icon .edit-icon,
-.recipe-action--icon .trash-icon {
+.recipe-action--icon .trash-icon,
+.recipe-action--icon .heart-icon {
   width: 19px;
   height: 19px;
 }
 .recipe-action--danger { color: #b3261e; }
 .recipe-action--danger:active { background: #fbeceb; border-color: #f0bcb8; }
+
+.btn-danger--block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 20px 0 0;
+}
+.btn-danger--block .trash-icon { width: 18px; height: 18px; }
 
 /* Favourites: heart button in the home header, hearts on cards */
 .heart-icon { width: 18px; height: 18px; display: block; }

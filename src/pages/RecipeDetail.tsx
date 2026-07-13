@@ -25,7 +25,16 @@ import { inPlan, togglePlan } from '../lib/plan'
 import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
-import { CalendarIcon, EditIcon, InstagramIcon, RemindersIcon, TikTokIcon, TrashIcon } from '../components/icons'
+import {
+  CalendarIcon,
+  ChevronIcon,
+  EditIcon,
+  HeartIcon,
+  InstagramIcon,
+  RemindersIcon,
+  TikTokIcon,
+  TrashIcon,
+} from '../components/icons'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -493,7 +502,7 @@ export default function RecipeDetail() {
       <details className="recipe-section" open>
         <summary className="section-title">
           Ingredients
-          <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+          <ChevronIcon />
         </summary>
         <div className="recipe-section__body">
           <p className="scale-note">
@@ -508,14 +517,14 @@ export default function RecipeDetail() {
           <div className="unit-toggle" role="group" aria-label="Unit system">
             <button
               type="button"
-              className={`filter-chip filter-chip--sm${unitSystem === 'metric' ? ' filter-chip--active' : ''}`}
+              className={`unit-toggle__opt${unitSystem === 'metric' ? ' unit-toggle__opt--active' : ''}`}
               onClick={() => setUnitSystem((s) => (s === 'metric' ? null : 'metric'))}
             >
               Metric
             </button>
             <button
               type="button"
-              className={`filter-chip filter-chip--sm${unitSystem === 'imperial' ? ' filter-chip--active' : ''}`}
+              className={`unit-toggle__opt${unitSystem === 'imperial' ? ' unit-toggle__opt--active' : ''}`}
               onClick={() => setUnitSystem((s) => (s === 'imperial' ? null : 'imperial'))}
             >
               Imperial
@@ -593,7 +602,7 @@ export default function RecipeDetail() {
         <details className="recipe-section" open>
           <summary className="section-title">
             Method
-            <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+            <ChevronIcon />
           </summary>
           <div className="recipe-section__body">
           <p className="scale-note">Click on a step to mark it as complete.</p>
@@ -644,7 +653,7 @@ export default function RecipeDetail() {
       <details className="recipe-section" open>
         <summary className="section-title">
           My Notes
-          <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+          <ChevronIcon />
         </summary>
         <div className="recipe-section__body">
         {editingNotes ? (
@@ -678,15 +687,19 @@ export default function RecipeDetail() {
         </div>
       </details>
 
-      <section>
-        <h2 className="section-title">
-          Nutrition{' '}
-          {nutritionRows.length > 0 && (
-            <span className="section-title__hint">
-              per serving{recipe.nutrition?.servingSizeG ? ` (${recipe.nutrition.servingSizeG}g)` : ''}
-            </span>
-          )}
-        </h2>
+      <details className="recipe-section">
+        <summary className="section-title">
+          <span>
+            Nutrition{' '}
+            {nutritionRows.length > 0 && (
+              <span className="section-title__hint">
+                per serving{recipe.nutrition?.servingSizeG ? ` (${recipe.nutrition.servingSizeG}g)` : ''}
+              </span>
+            )}
+          </span>
+          <ChevronIcon />
+        </summary>
+        <div className="recipe-section__body">
         {nutritionRows.length > 0 ? (
           <>
             <dl className="nutrition-table">
@@ -793,7 +806,8 @@ export default function RecipeDetail() {
             </div>
           )}
         </div>
-      </section>
+        </div>
+      </details>
 
       {recipe.source?.url && !video && (
         <p className="muted source-link">
@@ -807,11 +821,12 @@ export default function RecipeDetail() {
       <div className="recipe-actionbar">
         <button
           type="button"
-          className={`recipe-action${recipe.favorite ? ' recipe-action--fav' : ''}`}
+          className={`recipe-action recipe-action--icon${recipe.favorite ? ' recipe-action--fav' : ''}`}
           onClick={toggleFavorite}
           aria-pressed={!!recipe.favorite}
+          aria-label={recipe.favorite ? 'Remove From Favourites' : 'Add to Favourites'}
         >
-          {recipe.favorite ? '♥ Favourite' : '♡ Favourite'}
+          <HeartIcon />
         </button>
         <button
           type="button"
@@ -825,15 +840,11 @@ export default function RecipeDetail() {
         <Link to={`/recipe/${recipe.id}/edit`} className="recipe-action recipe-action--icon" aria-label="Edit Recipe">
           <EditIcon />
         </Link>
-        <button
-          type="button"
-          className="recipe-action recipe-action--icon recipe-action--danger"
-          onClick={handleDelete}
-          aria-label="Delete Recipe"
-        >
-          <TrashIcon />
-        </button>
       </div>
+
+      <button type="button" className="btn-danger btn-danger--block" onClick={handleDelete}>
+        <TrashIcon /> Delete Recipe
+      </button>
 
       {toast && <div className="toast" role="status">{toast}</div>}
     </article>
