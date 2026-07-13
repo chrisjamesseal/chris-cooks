@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { dessertCategoryOverride, parseIngredient, tidyCuisine, tidyRecipeTitle } from './lib/recipe'
+import { parseIngredient, stripListMarkers, tidyCuisine, tidyRecipeTitle, titleCategoryOverride } from './lib/recipe'
 import type { Recipe } from './types'
 
 /**
@@ -49,7 +49,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '6'
+const SEED_VERSION = '7'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 const SEED_PREFIX = 'seed-'
 
@@ -94,14 +94,17 @@ async function seedIfNeeded(): Promise<void> {
 }
 
 // Bump to re-run the cleanup over already-stored recipes.
-const TIDY_VERSION = '3'
+const TIDY_VERSION = '4'
 const TIDY_FLAG = 'chris-cooks:recipeTidyVersion'
 
 /**
  * One-off migration: tidy every stored recipe's title (Title Case, hype
- * stripped) and re-parse ingredients that have no quantity, so amounts written
- * with unicode fractions ("½ tsp garlic") gain pills/scaling. Ingredient ids
- * are preserved so saved cook-state keeps working.
+ * stripped), correct the category for unambiguous titles (a sauce/soup/salad/
+ * dessert scraped into the wrong bucket), strip leftover bullet/markdown
+ * artifacts from ingredients and steps, and re-parse ingredients that have no
+ * quantity, so amounts written with unicode fractions ("½ tsp garlic") gain
+ * pills/scaling. Ingredient and step ids are preserved so saved cook-state
+ * keeps working.
  */
 async function tidyStoredRecipes(): Promise<void> {
   try {
@@ -113,22 +116,30 @@ async function tidyStoredRecipes(): Promise<void> {
       let changed = false
       const title = tidyRecipeTitle(recipe.title)
       if (title && title !== recipe.title) changed = true
-      let mainCategory = recipe.mainCategory
-      if (mainCategory !== 'Dessert' && dessertCategoryOverride(recipe.title)) {
-        mainCategory = 'Dessert'
-        changed = true
-      }
+      const override = titleCategoryOverride(recipe.title)
+      const mainCategory = override && override !== recipe.mainCategory ? override : recipe.mainCategory
+      if (mainCategory !== recipe.mainCategory) changed = true
       const cuisine = tidyCuisine(recipe.cuisine)
       if (cuisine !== recipe.cuisine) changed = true
       const ingredients = recipe.ingredients.map((ing) => {
-        if (ing.quantity !== undefined) return ing
-        const reparsed = parseIngredient(ing.raw)
-        if (reparsed.quantity === undefined) return ing
+        const cleanedRaw = stripListMarkers(ing.raw)
+        if (cleanedRaw === ing.raw && ing.quantity !== undefined) return ing
+        const reparsed = parseIngredient(cleanedRaw)
         changed = true
-        return { ...ing, quantity: reparsed.quantity, unit: reparsed.unit, item: reparsed.item }
+        return reparsed.quantity === undefined
+          ? { ...ing, raw: cleanedRaw, item: cleanedRaw }
+          : { ...ing, raw: cleanedRaw, quantity: reparsed.quantity, unit: reparsed.unit, item: reparsed.item }
+      })
+      const steps = recipe.steps.map((step) => {
+        const text = stripListMarkers(step.text)
+        if (text === step.text) return step
+        changed = true
+        return { ...step, text }
       })
       // Keep updatedAt so the cleanup doesn't reshuffle the home-screen order.
-      if (changed) tx.store.put({ ...recipe, title: title || recipe.title, mainCategory, cuisine, ingredients })
+      if (changed) {
+        tx.store.put({ ...recipe, title: title || recipe.title, mainCategory, cuisine, ingredients, steps })
+      }
     }
     await tx.done
     localStorage.setItem(TIDY_FLAG, TIDY_VERSION)

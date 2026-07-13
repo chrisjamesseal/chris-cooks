@@ -67,7 +67,9 @@ const NUTRITION_SCHEMA = {
   },
 }
 
-const VIDEO_SYSTEM = `You extract a structured recipe from a social cooking video's public data: its caption text and its cover image. The dish name is often only shown on-screen in the video, so use the cover image to identify the dish and name it — "title" must be a short, appetising dish name (no emojis, no the word "recipe", no creator handles or stats). If the caption lists ingredients, preserve their exact quantities and wording; do not invent quantities. If the caption has no method, write a concise, sensible step-by-step method for this exact dish based on the ingredients and what the image shows. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of Breakfast, Lunch, Dinner, Dessert, Snack. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated or safely inferable, else null.`
+const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Sauce', 'Soup', 'Salad', 'Dessert', 'Snack']
+
+const VIDEO_SYSTEM = `You extract a structured recipe from a social cooking video's public data: its caption text and its cover image. The dish name is often only shown on-screen in the video, so use the cover image to identify the dish and name it — "title" must be a short, appetising dish name (no emojis, no the word "recipe", no creator handles or stats). If the caption lists ingredients, preserve their exact quantities and wording; do not invent quantities. If the caption has no method, write a concise, sensible step-by-step method for this exact dish based on the ingredients and what the image shows. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of ${CATEGORIES.join(', ')} — use Sauce/Soup/Salad/Side when that is genuinely what the dish is, not just an ingredient in a larger meal. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated or safely inferable, else null.`
 
 const VIDEO_SCHEMA = {
   type: 'object',
@@ -78,12 +80,16 @@ const VIDEO_SCHEMA = {
     ingredients: { type: 'array', items: { type: 'string' } },
     steps: { type: 'array', items: { type: 'string' } },
     servings: { type: 'integer' },
-    category: { type: 'string', enum: ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'] },
+    category: { type: 'string', enum: CATEGORIES },
     cuisine: { type: ['string', 'null'] },
     prep: { type: ['string', 'null'] },
     cook: { type: ['string', 'null'] },
   },
 }
+
+const IMAGE_SYSTEM = `You extract a structured recipe from a photo — this could be a cookbook page, a handwritten recipe card, a printed recipe, or a screenshot of a recipe website or app. Read the image carefully and transcribe the recipe faithfully; do not invent quantities or steps that aren't shown. "title" must be a short, clean dish name (no emojis, no the word "recipe"). Preserve ingredient quantities and units exactly as written. If the method is numbered in the photo, keep it as separate steps in the same order. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of ${CATEGORIES.join(', ')}. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated, else null. If the image does not contain a readable recipe at all, return every field as an empty string/array (title: "", ingredients: [], steps: []) rather than guessing.`
+
+const IMAGE_SCHEMA = VIDEO_SCHEMA
 
 export default {
   async fetch(request, env) {
@@ -115,6 +121,10 @@ export default {
 
     if (body.mode === 'estimate-nutrition') {
       return handleNutritionEstimate(body, env, cors)
+    }
+
+    if (body.mode === 'image-import') {
+      return handleImageImport(body, env, cors)
     }
 
     const healthier = body.mode === 'healthier'
@@ -325,6 +335,64 @@ async function handleVideoImport(body, env, cors) {
     return json({ error: 'Could not parse model output' }, 502, cors)
   }
   recipe.image = imageDataUrl
+  return json(recipe, 200, cors)
+}
+
+/**
+ * mode: 'image-import' — the user photographs a recipe (cookbook page,
+ * handwritten card, or a screenshot) and the Worker reads it with Claude
+ * vision. The client sends the already-downscaled image as base64; the
+ * client keeps and stores that same photo, so the Worker only returns text.
+ */
+async function handleImageImport(body, env, cors) {
+  const data = typeof body.image === 'string' ? body.image : ''
+  const mediaType = typeof body.mediaType === 'string' ? body.mediaType : 'image/jpeg'
+  if (!data) return json({ error: 'No image provided' }, 400, cors)
+
+  let res
+  try {
+    res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4096,
+        system: IMAGE_SYSTEM,
+        output_config: { format: { type: 'json_schema', schema: IMAGE_SCHEMA } },
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+              { type: 'text', text: 'Extract the recipe from this photo.' },
+            ],
+          },
+        ],
+      }),
+    })
+  } catch (e) {
+    return json({ error: `Upstream fetch failed: ${e}` }, 502, cors)
+  }
+  if (!res.ok) return json({ error: `Anthropic API ${res.status}` }, 502, cors)
+
+  const resData = await res.json()
+  const text = (resData.content || [])
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+  let recipe
+  try {
+    recipe = JSON.parse(text)
+  } catch {
+    return json({ error: 'Could not parse model output' }, 502, cors)
+  }
+  if (!recipe.title || !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
+    return json({ error: "Couldn't read a recipe from that photo" }, 422, cors)
+  }
   return json(recipe, 200, cors)
 }
 

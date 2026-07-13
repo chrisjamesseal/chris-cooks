@@ -23,7 +23,8 @@ type HealthCategory = {
 }
 
 const kcal = (n: NutritionInfo) => n.calories ?? 0
-const isMeal = (r: Recipe) => r.mainCategory !== 'Side' && r.mainCategory !== 'Dessert' && r.mainCategory !== 'Snack'
+const NON_MEAL_CATEGORIES = new Set<Recipe['mainCategory']>(['Side', 'Sauce', 'Dessert', 'Snack'])
+const isMeal = (r: Recipe) => !NON_MEAL_CATEGORIES.has(r.mainCategory)
 const isSnack = (r: Recipe) => r.mainCategory === 'Snack' || r.mainCategory === 'Dessert' || r.mainCategory === 'Side'
 
 const HEALTH_CATEGORIES: HealthCategory[] = [

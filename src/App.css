@@ -29,16 +29,17 @@
 .app-head__version:active { opacity: 0.6; }
 
 .app-head__actions { display: flex; gap: 6px; align-items: center; }
-.app-head__actions > * {
-  width: 40px;
-  height: 40px;
-  padding: 0;
+.app-head__actions > *:active { transform: scale(0.92); }
+.app-head__add {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  white-space: nowrap;
 }
-.app-head__actions > *:active { transform: scale(0.92); }
-.app-head__add { font-size: 18px; line-height: 1; }
+.app-head__add .plus-icon { width: 16px; height: 16px; }
 
 .app-main {
   flex: 1;
@@ -576,6 +577,24 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .import-row .field__input { flex: 1; min-width: 0; }
 .import-row .btn-primary { white-space: nowrap; }
 .import-hint { margin: 0; font-size: 13px; color: var(--muted); }
+.import-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.import-divider::before,
+.import-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.import-photo-btn { width: 100%; text-align: center; }
 .import-success {
   background: #e7f5ee;
   border: 1px solid #bfe3d0;
@@ -880,6 +899,26 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 /* Nutrition */
 .section-title__hint { font-size: 13px; font-weight: 500; color: var(--muted); }
 .field__label--sm { font-size: 13px; }
+.category-checks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+  margin-top: 4px;
+}
+.category-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  padding: 8px 4px;
+}
+.category-check input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+
 .nutrition-fieldset { display: grid; gap: 10px; }
 .nutrition-fieldset > summary {
   cursor: pointer;

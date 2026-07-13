@@ -8,12 +8,17 @@ import { FoodIcon } from '../components/FoodIcon'
 import { CalendarIcon, HeartIcon } from '../components/icons'
 import type { MainCategory, Recipe } from '../types'
 
-const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
+const CATEGORIES: MainCategory[] = [
+  'Breakfast', 'Lunch', 'Dinner', 'Soup', 'Salad', 'Side', 'Sauce', 'Snack', 'Dessert',
+]
 const CATEGORY_LABEL: Record<MainCategory, string> = {
   Breakfast: 'Breakfast',
   Lunch: 'Lunch',
   Dinner: 'Dinner',
   Side: 'Sides',
+  Sauce: 'Sauces',
+  Soup: 'Soups',
+  Salad: 'Salads',
   Snack: 'Snacks',
   Dessert: 'Desserts',
 }

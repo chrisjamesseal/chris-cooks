@@ -26,15 +26,28 @@ const TITLE_HYPE =
   /^(?:the\s+|my\s+|this\s+|these\s+|our\s+)?(?:absolute\s+)?(?:best(?:\s+ever)?|easiest|quickest|simplest|ultimate|perfect|amazing|incredible|unbelievable|insanely\s+good|viral|famous|legendary|epic|to\s+die\s+for|must[- ]try)\s+/i
 
 /**
- * Titles that are unambiguously desserts, used to correct miscategorised
- * imports ("Classic Victoria Sandwich" is a cake, whatever the site says).
- * Deliberately tight so savoury dishes and breakfast bakes are never caught.
+ * Titles that are unambiguous about their category, used to correct
+ * miscategorised imports ("Classic Victoria Sandwich" is a cake, "Hollandaise
+ * Sauce" is a sauce, whatever the site's own category field says). Checked in
+ * order; each regex is deliberately tight so savoury dishes and breakfast
+ * bakes are never mis-caught by the dessert pattern, etc.
  */
-const DESSERT_TITLE_RE =
-  /\b(cakes?|sponge|victoria sandwich|cheesecake|brownies?|banoffee|pavlova|trifle|tiramisu|fudge|meringues?|profiteroles?|eclairs?|ice cream|sorbet)\b/i
+const TITLE_CATEGORY_RULES: [RegExp, 'Sauce' | 'Soup' | 'Salad' | 'Dessert'][] = [
+  [/\b(sauce|gravy|dressing|hollandaise|marinade|dip|salsa|chutney|relish)\b/i, 'Sauce'],
+  [/\b(soup|bisque|chowder|broth)\b/i, 'Soup'],
+  [/\bsalad|coleslaw|cole slaw\b/i, 'Salad'],
+  [
+    /\b(cakes?|sponge|victoria sandwich|cheesecake|brownies?|banoffee|pavlova|trifle|tiramisu|fudge|meringues?|profiteroles?|eclairs?|ice cream|sorbet)\b/i,
+    'Dessert',
+  ],
+]
 
-export function dessertCategoryOverride(title: string): boolean {
-  return DESSERT_TITLE_RE.test(title)
+/** The category a title unambiguously belongs to, if any. */
+export function titleCategoryOverride(title: string): 'Sauce' | 'Soup' | 'Salad' | 'Dessert' | undefined {
+  for (const [re, category] of TITLE_CATEGORY_RULES) {
+    if (re.test(title)) return category
+  }
+  return undefined
 }
 
 /**
@@ -87,9 +100,29 @@ export function tidyRecipeTitle(raw: string): string {
     .join(' ')
 }
 
+/**
+ * Strip markdown/list artifacts that leak in from scraped pages, AI output or
+ * pasted text — leading bullets ("•", "-", "*"), numbered/lettered list
+ * markers ("1.", "2)", "a."), and markdown emphasis ("**bold**", "*italic*")
+ * — so ingredients and steps read as clean prose.
+ */
+export function stripListMarkers(line: string): string {
+  let t = line
+    // Leading bullet glyphs (possibly repeated), including "- " and "* ".
+    .replace(/^(?:[•‣◦▪▸●○✦✱][ \t]+|[-*][ \t]+)+/, '')
+    // Leading numbered ("1.", "2)") or lettered ("a.", "b)") list markers.
+    .replace(/^\s*\d+[.):]\s+/, '')
+    .replace(/^\s*[a-hA-H][.)]\s+/, '')
+    // Markdown bold wrapper around a span, keeping the inner text.
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+  // Any asterisks left over (stray emphasis markers) are noise, not content.
+  t = t.replace(/\*+/g, '')
+  return t.replace(/\s{2,}/g, ' ').trim()
+}
+
 /** Drop parenthetical notes and tidy spacing/punctuation from an ingredient line. */
 export function cleanIngredientLine(line: string): string {
-  return line
+  return stripListMarkers(line)
     .replace(/\s*[([][^)\]]*[)\]]/g, '') // remove (…) and […] notes
     .replace(/[()[\]]/g, ' ') // neutralise any orphan bracket (note split across lines)
     .replace(/\s+,/g, ',') // fix " ," left behind
@@ -144,7 +177,7 @@ export function parseSteps(text: string): Step[] {
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean)
-    .map((line) => ({ id: newId(), text: line.replace(/^\d+[.)]\s*/, '') }))
+    .map((line) => ({ id: newId(), text: stripListMarkers(line) }))
 }
 
 export function ingredientsFromText(text: string): Ingredient[] {

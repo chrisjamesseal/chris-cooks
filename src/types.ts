@@ -1,4 +1,13 @@
-export type MainCategory = 'Breakfast' | 'Lunch' | 'Dinner' | 'Side' | 'Dessert' | 'Snack'
+export type MainCategory =
+  | 'Breakfast'
+  | 'Lunch'
+  | 'Dinner'
+  | 'Side'
+  | 'Sauce'
+  | 'Soup'
+  | 'Salad'
+  | 'Dessert'
+  | 'Snack'
 
 export type Recipe = {
   id: string

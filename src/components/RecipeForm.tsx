@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import type { MainCategory, Nutrition, Recipe, Step } from '../types'
-import { ingredientsFromText, newId, tidyRecipeTitle } from '../lib/recipe'
+import { ingredientsFromText, newId, stripListMarkers, tidyRecipeTitle } from '../lib/recipe'
 import { detectVideoSource } from '../lib/import'
 
-const CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert']
+const CATEGORIES: MainCategory[] = [
+  'Breakfast', 'Lunch', 'Dinner', 'Soup', 'Salad', 'Side', 'Sauce', 'Snack', 'Dessert',
+]
 
 const NUTRITION_FIELDS: { key: keyof Nutrition; label: string }[] = [
   { key: 'calories', label: 'Calories' },
@@ -22,8 +24,8 @@ type NutritionDraft = Partial<Record<keyof Nutrition, string>>
 
 export type RecipeDraft = {
   title: string
-  mainCategory: MainCategory
-  alsoCategories: MainCategory[]
+  /** Every category the recipe belongs to; the one listed first in CATEGORIES order becomes mainCategory. */
+  categories: MainCategory[]
   cuisine: string
   servings: string
   prep: string
@@ -118,8 +120,7 @@ function draftToTime(value: string): string | undefined {
 function draftFromRecipe(recipe?: Recipe): RecipeDraft {
   return {
     title: recipe?.title ?? '',
-    mainCategory: recipe?.mainCategory ?? 'Dinner',
-    alsoCategories: recipe?.alsoCategories ?? [],
+    categories: recipe ? [recipe.mainCategory, ...(recipe.alsoCategories ?? [])] : ['Dinner'],
     cuisine: recipe?.cuisine ?? '',
     servings: recipe ? String(recipe.servings) : '2',
     prep: timeToDraft(recipe?.times.prep),
@@ -161,6 +162,12 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
   function setNutrition(key: keyof Nutrition, value: string) {
     setDraft((d) => ({ ...d, nutrition: { ...d.nutrition, [key]: value } }))
   }
+  function toggleCategory(c: MainCategory) {
+    setDraft((d) => ({
+      ...d,
+      categories: d.categories.includes(c) ? d.categories.filter((x) => x !== c) : [...d.categories, c],
+    }))
+  }
   function setStep(i: number, value: string) {
     setDraft((d) => {
       const steps = [...d.steps]
@@ -193,13 +200,19 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       setError('Please give your recipe a title.')
       return
     }
+    const mainCategory = CATEGORIES.find((c) => draft.categories.includes(c))
+    if (!mainCategory) {
+      setError('Please choose at least one category.')
+      return
+    }
+    const alsoCategories = draft.categories.filter((c) => c !== mainCategory)
     const ingredients = ingredientsFromText(draft.ingredients)
     if (ingredients.length === 0) {
       setError('Add at least one ingredient.')
       return
     }
     const steps: Step[] = draft.steps
-      .map((t) => t.trim().replace(/^\d+[.)]\s*/, ''))
+      .map((t) => stripListMarkers(t))
       .filter(Boolean)
       .map((text) => ({ id: newId(), text }))
     if (steps.length === 0) {
@@ -218,8 +231,8 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       schemaVersion: 1,
       title,
       image: draft.image.trim() || undefined,
-      mainCategory: draft.mainCategory,
-      alsoCategories: draft.alsoCategories.filter((c) => c !== draft.mainCategory),
+      mainCategory,
+      alsoCategories: alsoCategories.length ? alsoCategories : undefined,
       cuisine: draft.cuisine.trim() || undefined,
       servings: Math.max(1, Number(draft.servings) || 1),
       times: {
@@ -259,54 +272,32 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
         />
       </label>
 
-      <div className="field-row">
-        <label className="field">
-          <span className="field__label">Category</span>
-          <select
-            className="field__input"
-            value={draft.mainCategory}
-            onChange={(e) => set('mainCategory', e.target.value as MainCategory)}
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field__label">Servings</span>
-          <input
-            className="field__input"
-            type="number"
-            min={1}
-            value={draft.servings}
-            onChange={(e) => set('servings', e.target.value)}
-          />
-        </label>
-      </div>
+      <label className="field">
+        <span className="field__label">Servings</span>
+        <input
+          className="field__input"
+          type="number"
+          min={1}
+          value={draft.servings}
+          onChange={(e) => set('servings', e.target.value)}
+        />
+      </label>
 
       <div className="field">
-        <span className="field__label">Also Show In <span className="field__hint">optional, e.g. pancakes in Breakfast and Lunch</span></span>
-        <div className="filter-chips" style={{ marginBottom: 0 }}>
-          {CATEGORIES.filter((c) => c !== draft.mainCategory).map((c) => {
-            const on = draft.alsoCategories.includes(c)
-            return (
-              <button
-                key={c}
-                type="button"
-                className={`filter-chip filter-chip--sm${on ? ' filter-chip--active' : ''}`}
-                onClick={() =>
-                  set(
-                    'alsoCategories',
-                    on ? draft.alsoCategories.filter((x) => x !== c) : [...draft.alsoCategories, c],
-                  )
-                }
-              >
-                {c}
-              </button>
-            )
-          })}
+        <span className="field__label">
+          Category <span className="field__hint">tick all that apply, e.g. pancakes for Breakfast and Lunch</span>
+        </span>
+        <div className="category-checks">
+          {CATEGORIES.map((c) => (
+            <label className="category-check" key={c}>
+              <input
+                type="checkbox"
+                checked={draft.categories.includes(c)}
+                onChange={() => toggleCategory(c)}
+              />
+              {c}
+            </label>
+          ))}
         </div>
       </div>
 

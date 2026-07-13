@@ -6,7 +6,7 @@ a static site, the API key can't live in the browser — this tiny Cloudflare
 Worker holds it server-side. It's **optional**: without it, URL imports work
 exactly as before, just without the AI polish.
 
-The Worker handles three modes:
+The Worker handles six modes:
 
 - **cleanup** (default) — tidies scraped recipe text on URL imports.
 - **healthier** — rewrites a recipe to be lighter; powers the "Rewrite this
@@ -16,9 +16,17 @@ The Worker handles three modes:
   returns a complete recipe — proper dish name, ingredients, method, servings,
   category and photo. Without the Worker, video imports fall back to parsing
   the caption text only.
+- **image-import** — powers "Upload a Photo" on the Add Recipe screen: reads a
+  photo of a recipe (cookbook page, handwritten card, screenshot) with Claude
+  vision and returns the structured recipe. Without the Worker, this option
+  isn't available.
+- **estimate-nutrition** — estimates per-serving nutrition from a recipe's
+  ingredient list when the source doesn't publish any; used by the "Estimate
+  Nutrition" buttons on the Nutrition tab and on individual recipes. Estimates
+  are always clearly marked (≈) and never presented as source data.
 
-If you deployed the Worker before the video mode existed, redeploy with the
-same command below to pick up the new code.
+If you deployed the Worker before these modes existed, redeploy with the same
+command below to pick up the new code.
 
 ## Deploy
 

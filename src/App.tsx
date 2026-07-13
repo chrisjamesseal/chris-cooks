@@ -18,8 +18,8 @@ function AppHeader() {
       <Link to="/" className="app-head__title">My Recipes</Link>
       <Link to="/changelog" className="app-head__version">v{__APP_VERSION__}</Link>
       <div className="app-head__actions">
-        <Link to="/add" className="btn-primary btn-primary--sm app-head__add" aria-label="Add Recipe">
-          <PlusIcon />
+        <Link to="/add" className="btn-primary btn-primary--sm app-head__add">
+          <PlusIcon /> New Recipe
         </Link>
       </div>
     </header>

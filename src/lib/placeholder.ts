@@ -51,9 +51,12 @@ const TITLE_EMOJI: [RegExp, string][] = [
 
 const CATEGORY_EMOJI: Record<MainCategory, string> = {
   Breakfast: '🍳',
-  Lunch: '🥗',
+  Lunch: '🥪',
   Dinner: '🍽️',
   Side: '🥔',
+  Sauce: '🥫',
+  Soup: '🍲',
+  Salad: '🥗',
   Dessert: '🍰',
   Snack: '🥨',
 }
@@ -63,6 +66,9 @@ const CATEGORY_GRADIENT: Record<MainCategory, string> = {
   Lunch: 'linear-gradient(135deg, #d8f2df, #a7ddb9)',
   Dinner: 'linear-gradient(135deg, #cdeede, #97d3ba)',
   Side: 'linear-gradient(135deg, #e8ecd9, #c8d6a3)',
+  Sauce: 'linear-gradient(135deg, #ffe0cf, #f3b48c)',
+  Soup: 'linear-gradient(135deg, #ffe4c9, #f4b98a)',
+  Salad: 'linear-gradient(135deg, #ddf2c8, #aed98a)',
   Dessert: 'linear-gradient(135deg, #ffe2ec, #ffc0d6)',
   Snack: 'linear-gradient(135deg, #fff2c2, #ffd980)',
 }

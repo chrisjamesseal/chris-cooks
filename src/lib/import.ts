@@ -1,5 +1,5 @@
 import type { Ingredient, MainCategory, Nutrition, Recipe, Step } from '../types'
-import { dessertCategoryOverride, newId, parseIngredient, tidyCuisine, tidyRecipeTitle } from './recipe'
+import { newId, parseIngredient, stripListMarkers, tidyCuisine, tidyRecipeTitle, titleCategoryOverride } from './recipe'
 
 /**
  * Recipe import: fetch a page and pull structured recipe data out of its
@@ -82,7 +82,7 @@ function mapNodeToRecipe(node: Json, sourceUrl: string): Recipe {
     title,
     image: firstImage(node.image),
     source: { type: 'url', url: sourceUrl },
-    mainCategory: dessertCategoryOverride(title) ? 'Dessert' : mapCategory(firstString(node.recipeCategory)),
+    mainCategory: titleCategoryOverride(title) ?? mapCategory(firstString(node.recipeCategory)),
     cuisine: tidyCuisine(cleanText(firstString(node.recipeCuisine))),
     servings: parseYield(node.recipeYield) ?? 1,
     times: {
@@ -155,7 +155,10 @@ function parseInstructions(value: Json): Step[] {
 
 function mapCategory(raw: string | undefined): MainCategory {
   const c = (raw || '').toLowerCase()
-  if (/side|sauce|condiment|dip|dressing|accompaniment/.test(c)) return 'Side'
+  if (/sauce|condiment|dip|dressing|marinade/.test(c)) return 'Sauce'
+  if (/soup|bisque|chowder|broth/.test(c)) return 'Soup'
+  if (/salad|slaw/.test(c)) return 'Salad'
+  if (/side|accompaniment/.test(c)) return 'Side'
   if (/dessert|cake|pudding|sweet|bake/.test(c)) return 'Dessert'
   if (/breakfast|brunch/.test(c)) return 'Breakfast'
   if (/snack|canap|starter|appetiser|appetizer/.test(c)) return 'Snack'
@@ -241,17 +244,19 @@ const ENTITIES: Record<string, string> = {
 
 export function cleanText(input: string | undefined): string {
   if (!input) return ''
-  return input
-    .replace(/<[^>]+>/g, ' ') // strip any HTML tags
-    .replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, code: string) => {
-      const key = code.toLowerCase()
-      if (ENTITIES[key]) return ENTITIES[key]
-      if (key.startsWith('#x')) return codePoint(parseInt(key.slice(2), 16))
-      if (key.startsWith('#')) return codePoint(parseInt(key.slice(1), 10))
-      return whole
-    })
-    .replace(/\s+/g, ' ')
-    .trim()
+  return stripListMarkers(
+    input
+      .replace(/<[^>]+>/g, ' ') // strip any HTML tags
+      .replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, code: string) => {
+        const key = code.toLowerCase()
+        if (ENTITIES[key]) return ENTITIES[key]
+        if (key.startsWith('#x')) return codePoint(parseInt(key.slice(2), 16))
+        if (key.startsWith('#')) return codePoint(parseInt(key.slice(1), 10))
+        return whole
+      })
+      .replace(/\s+/g, ' ')
+      .trim(),
+  )
 }
 
 function codePoint(n: number): string {
@@ -519,17 +524,18 @@ function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' 
   const { title, username, ingredients, steps } = parseVideoCaption(caption)
   const now = Date.now()
   const parsedIngredients = ingredients.map(parseIngredient).filter((i) => i.raw)
+  const finalTitle = tidyRecipeTitle(
+    title ||
+      titleFromIngredients(parsedIngredients) ||
+      (username ? `Recipe by @${username}` : `Imported ${sourceType} recipe`),
+  )
 
   return {
     id: newId(),
     schemaVersion: 1,
-    title: tidyRecipeTitle(
-      title ||
-        titleFromIngredients(parsedIngredients) ||
-        (username ? `Recipe by @${username}` : `Imported ${sourceType} recipe`),
-    ),
+    title: finalTitle,
     source: { type: sourceType, url: sourceUrl },
-    mainCategory: 'Dinner',
+    mainCategory: titleCategoryOverride(finalTitle) ?? 'Dinner',
     servings: 1,
     times: {},
     ingredients: parsedIngredients,
@@ -539,7 +545,9 @@ function parseVideoRecipe(html: string, sourceUrl: string, sourceType: 'tiktok' 
   }
 }
 
-const MAIN_CATEGORIES: MainCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack']
+const MAIN_CATEGORIES: MainCategory[] = [
+  'Breakfast', 'Lunch', 'Dinner', 'Side', 'Sauce', 'Soup', 'Salad', 'Dessert', 'Snack',
+]
 
 /**
  * Deep video import via the AI worker (when configured): the worker fetches
@@ -607,6 +615,115 @@ async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): P
     return null
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/** Downscale a photo for upload and split it into a data URL plus bare base64 + media type. */
+function downscaleImage(file: File): Promise<{ dataUrl: string; base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('decode failed'))
+      img.onload = () => {
+        const max = 1600
+        let { width, height } = img
+        const scale = Math.min(1, max / Math.max(width, height))
+        width = Math.round(width * scale)
+        height = Math.round(height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('no canvas'))
+        ctx.drawImage(img, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        resolve({ dataUrl, base64: dataUrl.split(',')[1] ?? '', mediaType: 'image/jpeg' })
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * Import a recipe from a photo (cookbook page, handwritten card, screenshot)
+ * via the AI worker's vision mode. Requires the worker to be configured —
+ * there's no non-AI fallback for reading a photo.
+ */
+export async function importRecipeFromImage(file: File): Promise<Recipe> {
+  const endpoint = import.meta.env.VITE_AI_CLEANUP_URL
+  if (!endpoint) {
+    throw new ImportError("Uploading a photo needs the AI helper set up. See the changelog for one-time setup.")
+  }
+
+  const { dataUrl, base64, mediaType } = await downscaleImage(file)
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 60000)
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode: 'image-import', image: base64, mediaType }),
+      signal: controller.signal,
+    })
+  } catch {
+    throw new ImportError("Couldn't reach the AI helper. Check your connection and try again.")
+  } finally {
+    clearTimeout(timer)
+  }
+
+  if (!res.ok) {
+    if (res.status === 422) {
+      throw new ImportError("Couldn't read a recipe from that photo. Try a clearer, well-lit shot.")
+    }
+    throw new ImportError(`The AI helper returned an error (${res.status}).`)
+  }
+
+  const data = (await res.json()) as {
+    title?: string
+    ingredients?: string[]
+    steps?: string[]
+    servings?: number
+    category?: string
+    cuisine?: string | null
+    prep?: string | null
+    cook?: string | null
+  }
+  const ingredients = Array.isArray(data.ingredients)
+    ? data.ingredients.map((l) => parseIngredient(cleanText(String(l)))).filter((i) => i.raw)
+    : []
+  const steps = Array.isArray(data.steps)
+    ? data.steps.map((t) => ({ id: newId(), text: cleanText(String(t)) })).filter((s) => s.text)
+    : []
+  if (!data.title || ingredients.length === 0 || steps.length === 0) {
+    throw new ImportError("Couldn't read a recipe from that photo. Try a clearer, well-lit shot.")
+  }
+
+  const now = Date.now()
+  return {
+    id: newId(),
+    schemaVersion: 1,
+    title: tidyRecipeTitle(tidyTitle(cleanText(String(data.title)))),
+    image: dataUrl,
+    source: { type: 'manual' },
+    mainCategory: MAIN_CATEGORIES.includes(data.category as MainCategory) ? (data.category as MainCategory) : 'Dinner',
+    cuisine: tidyCuisine(data.cuisine ? cleanText(String(data.cuisine)) : undefined),
+    servings:
+      typeof data.servings === 'number' && Number.isFinite(data.servings) && data.servings >= 1
+        ? Math.round(data.servings)
+        : 1,
+    times: {
+      prep: data.prep ? cleanText(String(data.prep)) || undefined : undefined,
+      cook: data.cook ? cleanText(String(data.cook)) || undefined : undefined,
+    },
+    ingredients,
+    steps,
+    createdAt: now,
+    updatedAt: now,
   }
 }
 

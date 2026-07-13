@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.9.0',
+    title: 'New categories, cleaner text, and photo import',
+    notes: [
+      'New Sauce, Soup and Salad categories, existing recipes moved to where they belong (all your sauces, soups and salads are out of Sides and Lunch).',
+      'Editing a recipe now shows every category as a checkbox, tick as many as apply instead of one dropdown plus a separate list.',
+      'Bullet points, dashes and stray asterisks are now stripped automatically from ingredients and steps, whether typed, pasted or imported, so recipes read as clean prose.',
+      'Upload a Photo: got a cookbook page, a handwritten card, or a screenshot? Upload it on the Add Recipe screen and the AI helper reads it into a full recipe for you to review (needs the one-time AI helper setup).',
+      'The header add button now reads "New Recipe".',
+    ],
+  },
+  {
     version: '1.8.0',
     title: 'Weight-loss nutrition & tidier cards',
     notes: [
