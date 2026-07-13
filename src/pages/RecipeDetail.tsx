@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe, saveRecipe } from '../db'
 import {
+  convertIngredientText,
   deQuantifyStep,
   ingredientsForStep,
   ingredientsFromText,
   newId,
-  scaleIngredientText,
   stepParagraphs,
+  type UnitSystem,
 } from '../lib/recipe'
 import {
   aiEndpoint,
@@ -24,7 +25,7 @@ import { inPlan, togglePlan } from '../lib/plan'
 import { sendToShoppingList } from '../lib/shopping'
 import { videoInfoFromUrl } from '../lib/video'
 import { FoodIcon } from '../components/FoodIcon'
-import { CalendarIcon, InstagramIcon, RemindersIcon, TikTokIcon } from '../components/icons'
+import { CalendarIcon, EditIcon, InstagramIcon, RemindersIcon, TikTokIcon, TrashIcon } from '../components/icons'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
 const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
@@ -38,14 +39,6 @@ const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = 
   { key: 'sodiumMg', label: 'Sodium', unit: 'mg' },
   { key: 'cholesterolMg', label: 'Cholesterol', unit: 'mg' },
 ]
-
-function sourceHostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
-}
 
 // Ticked ingredients, step progress and servings survive reloads — you can
 // close the app mid-shop or mid-cook and pick up where you left off.
@@ -162,6 +155,8 @@ export default function RecipeDetail() {
   const [notesDraft, setNotesDraft] = useState('')
   const [estimating, setEstimating] = useState(false)
   const [estimateError, setEstimateError] = useState<string | null>(null)
+  // View-only unit preference (not persisted, mirrors the servings scaler).
+  const [unitSystem, setUnitSystem] = useState<UnitSystem | null>(null)
 
   useEffect(() => {
     if (id) setPlanned(inPlan(id))
@@ -323,7 +318,9 @@ export default function RecipeDetail() {
   }
 
   function sendToReminders() {
-    const remaining = loaded.ingredients.filter((i) => !have.has(i.id)).map((i) => scaleIngredientText(i, factor))
+    const remaining = loaded.ingredients
+      .filter((i) => !have.has(i.id))
+      .map((i) => convertIngredientText(i, factor, unitSystem))
     if (remaining.length === 0) return
     sendToShoppingList(remaining)
     flash('Opening Reminders… (List Also Copied)')
@@ -493,85 +490,112 @@ export default function RecipeDetail() {
         </a>
       )}
 
-      <section>
-        <h2 className="section-title">Ingredients</h2>
-        <p className="scale-note">
-          Select any items you already have to create a shopping list.{' '}
-          {have.size > 0 && (
-            <button type="button" className="link-btn" onClick={() => setHave(new Set())}>
-              Clear Ticks
-            </button>
-          )}
-        </p>
-        <ul className="ingredient-list ingredient-list--check">
-          {recipe.ingredients.map((ing) => {
-            const has = have.has(ing.id)
-            return (
-              <li key={ing.id}>
-                <button
-                  type="button"
-                  className={`ingredient-item${has ? ' ingredient-item--have' : ''}`}
-                  onClick={() => toggleHave(ing.id)}
-                  aria-pressed={has}
-                >
-                  <span className="ingredient-item__check" aria-hidden="true">
-                    {has ? '✓' : ''}
-                  </span>
-                  <span className="ingredient-item__text">{scaleIngredientText(ing, factor)}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-
-        <div className="servings-row" role="group" aria-label="Number of Servings">
-          <button
-            type="button"
-            className="stepper__btn"
-            onClick={() => setPeople((p) => Math.max(1, p - 1))}
-            aria-label="Fewer Servings"
-          >
-            −
-          </button>
-          <span className="servings-row__value">
-            {people} {people === 1 ? 'serving' : 'servings'}
-            {scaled && (
-              <button type="button" className="link-btn" onClick={() => setPeople(baseServings)}>
-                Reset
+      <details className="recipe-section" open>
+        <summary className="section-title">
+          Ingredients
+          <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div className="recipe-section__body">
+          <p className="scale-note">
+            Select any items you already have to create a shopping list.{' '}
+            {have.size > 0 && (
+              <button type="button" className="link-btn" onClick={() => setHave(new Set())}>
+                Clear Ticks
               </button>
             )}
-          </span>
-          <button
-            type="button"
-            className="stepper__btn"
-            onClick={() => setPeople((p) => p + 1)}
-            aria-label="More Servings"
-          >
-            +
-          </button>
-        </div>
+          </p>
 
-        <div className="shopping-actions">
-          <button
-            type="button"
-            className="btn-primary btn-reminders"
-            onClick={sendToReminders}
-            disabled={remainingCount === 0}
-          >
-            {remainingCount === 0 ? (
-              'Got Everything ✓'
-            ) : (
-              <>
-                <RemindersIcon /> Add {remainingCount} to Shopping List
-              </>
-            )}
-          </button>
+          <div className="unit-toggle" role="group" aria-label="Unit system">
+            <button
+              type="button"
+              className={`filter-chip filter-chip--sm${unitSystem === 'metric' ? ' filter-chip--active' : ''}`}
+              onClick={() => setUnitSystem((s) => (s === 'metric' ? null : 'metric'))}
+            >
+              Metric
+            </button>
+            <button
+              type="button"
+              className={`filter-chip filter-chip--sm${unitSystem === 'imperial' ? ' filter-chip--active' : ''}`}
+              onClick={() => setUnitSystem((s) => (s === 'imperial' ? null : 'imperial'))}
+            >
+              Imperial
+            </button>
+          </div>
+
+          <ul className="ingredient-list ingredient-list--check">
+            {recipe.ingredients.map((ing) => {
+              const has = have.has(ing.id)
+              return (
+                <li key={ing.id}>
+                  <button
+                    type="button"
+                    className={`ingredient-item${has ? ' ingredient-item--have' : ''}`}
+                    onClick={() => toggleHave(ing.id)}
+                    aria-pressed={has}
+                  >
+                    <span className="ingredient-item__check" aria-hidden="true">
+                      {has ? '✓' : ''}
+                    </span>
+                    <span className="ingredient-item__text">{convertIngredientText(ing, factor, unitSystem)}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="servings-row" role="group" aria-label="Number of Servings">
+            <button
+              type="button"
+              className="stepper__btn"
+              onClick={() => setPeople((p) => Math.max(1, p - 1))}
+              aria-label="Fewer Servings"
+            >
+              −
+            </button>
+            <span className="servings-row__value">
+              {people} {people === 1 ? 'serving' : 'servings'}
+              {scaled && (
+                <button type="button" className="link-btn" onClick={() => setPeople(baseServings)}>
+                  Reset
+                </button>
+              )}
+            </span>
+            <button
+              type="button"
+              className="stepper__btn"
+              onClick={() => setPeople((p) => p + 1)}
+              aria-label="More Servings"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="shopping-actions">
+            <button
+              type="button"
+              className="btn-primary btn-reminders"
+              onClick={sendToReminders}
+              disabled={remainingCount === 0}
+            >
+              {remainingCount === 0 ? (
+                'Got Everything ✓'
+              ) : (
+                <>
+                  <RemindersIcon /> Add {remainingCount} to Shopping List
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </section>
+      </details>
 
       {recipe.steps.length > 0 && (
-        <section>
-          <h2 className="section-title">Method</h2>
+        <details className="recipe-section" open>
+          <summary className="section-title">
+            Method
+            <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+          </summary>
+          <div className="recipe-section__body">
           <p className="scale-note">Click on a step to mark it as complete.</p>
           <ol className="step-list">
             {recipe.steps.map((step, index) => {
@@ -603,7 +627,7 @@ export default function RecipeDetail() {
                       <div className="step-ingredients">
                         {used.map((ing) => (
                           <span className="step-ingredient" key={ing.id}>
-                            {scaleIngredientText(ing, factor)}
+                            {convertIngredientText(ing, factor, unitSystem)}
                           </span>
                         ))}
                       </div>
@@ -613,11 +637,16 @@ export default function RecipeDetail() {
               )
             })}
           </ol>
-        </section>
+          </div>
+        </details>
       )}
 
-      <section>
-        <h2 className="section-title">My Notes</h2>
+      <details className="recipe-section" open>
+        <summary className="section-title">
+          My Notes
+          <span className="recipe-section__chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div className="recipe-section__body">
         {editingNotes ? (
           <div className="notes-edit">
             <AutoNotes value={notesDraft} onChange={setNotesDraft} />
@@ -646,7 +675,8 @@ export default function RecipeDetail() {
             ✏️ Add a Note
           </button>
         )}
-      </section>
+        </div>
+      </details>
 
       <section>
         <h2 className="section-title">
@@ -766,22 +796,13 @@ export default function RecipeDetail() {
       </section>
 
       {recipe.source?.url && !video && (
-        <p className="muted">
+        <p className="muted source-link">
           Source:{' '}
           <a href={recipe.source.url} target="_blank" rel="noreferrer">
-            {sourceHostname(recipe.source.url)}
+            {recipe.source.url}
           </a>
         </p>
       )}
-
-      <div className="form-actions">
-        <button type="button" className="btn-danger" onClick={handleDelete}>
-          Delete
-        </button>
-        <Link to={`/recipe/${recipe.id}/edit`} className="btn-primary">
-          Edit
-        </Link>
-      </div>
 
       <div className="recipe-actionbar">
         <button
@@ -800,6 +821,17 @@ export default function RecipeDetail() {
         >
           <CalendarIcon className="calendar-icon calendar-icon--inline" />
           {planned ? ' In Meal Plan ✓' : ' Add to Meal Plan'}
+        </button>
+        <Link to={`/recipe/${recipe.id}/edit`} className="recipe-action recipe-action--icon" aria-label="Edit Recipe">
+          <EditIcon />
+        </Link>
+        <button
+          type="button"
+          className="recipe-action recipe-action--icon recipe-action--danger"
+          onClick={handleDelete}
+          aria-label="Delete Recipe"
+        >
+          <TrashIcon />
         </button>
       </div>
 

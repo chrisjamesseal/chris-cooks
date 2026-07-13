@@ -234,6 +234,72 @@ export function scaleIngredientText(ing: Ingredient, factor: number): string {
   return ing.note ? `${line} (${ing.note})` : line
 }
 
+export type UnitSystem = 'metric' | 'imperial'
+
+// `toBase` always normalises the source unit to grams (weight) or
+// millilitres (volume), regardless of which direction the conversion runs.
+// `system` names the system converting THIS unit produces: an imperial unit
+// (lb/oz/cup/pint/quart) converts to metric, a metric unit (g/kg/ml/l)
+// converts to imperial.
+const UNIT_CONVERSIONS: Record<string, { toBase: number; kind: 'weight' | 'volume'; system: UnitSystem }> = {
+  lb: { toBase: 453.592, kind: 'weight', system: 'metric' },
+  lbs: { toBase: 453.592, kind: 'weight', system: 'metric' },
+  pound: { toBase: 453.592, kind: 'weight', system: 'metric' },
+  pounds: { toBase: 453.592, kind: 'weight', system: 'metric' },
+  oz: { toBase: 28.3495, kind: 'weight', system: 'metric' },
+  ounce: { toBase: 28.3495, kind: 'weight', system: 'metric' },
+  ounces: { toBase: 28.3495, kind: 'weight', system: 'metric' },
+  cup: { toBase: 236.588, kind: 'volume', system: 'metric' },
+  cups: { toBase: 236.588, kind: 'volume', system: 'metric' },
+  pint: { toBase: 473.176, kind: 'volume', system: 'metric' },
+  pints: { toBase: 473.176, kind: 'volume', system: 'metric' },
+  quart: { toBase: 946.353, kind: 'volume', system: 'metric' },
+  quarts: { toBase: 946.353, kind: 'volume', system: 'metric' },
+  g: { toBase: 1, kind: 'weight', system: 'imperial' },
+  kg: { toBase: 1000, kind: 'weight', system: 'imperial' },
+  ml: { toBase: 1, kind: 'volume', system: 'imperial' },
+  l: { toBase: 1000, kind: 'volume', system: 'imperial' },
+}
+
+/** Round to a fixed number of decimals and drop trailing zeros. */
+function roundTidy(n: number, decimals: number): string {
+  return String(Number(n.toFixed(decimals)))
+}
+
+function convertQuantityUnit(quantity: number, unit: string, system: UnitSystem): { text: string } | undefined {
+  const conv = UNIT_CONVERSIONS[unit.toLowerCase()]
+  if (!conv || conv.system !== system) return undefined
+  const base = quantity * conv.toBase // grams (weight) or ml (volume)
+
+  if (conv.kind === 'weight') {
+    if (system === 'metric') {
+      return base >= 1000 ? { text: `${roundTidy(base / 1000, 2)}kg` } : { text: `${Math.round(base)}g` }
+    }
+    const oz = base / 28.3495
+    return oz >= 16 ? { text: `${formatQuantity(oz / 16)} lb` } : { text: `${roundTidy(oz, 1)} oz` }
+  }
+
+  if (system === 'metric') {
+    return base >= 1000 ? { text: `${roundTidy(base / 1000, 2)}l` } : { text: `${Math.round(base)}ml` }
+  }
+  const flOz = base / 29.5735
+  return { text: `${roundTidy(flOz, 1)} fl oz` }
+}
+
+/**
+ * Scale AND convert an ingredient's unit system for display (e.g. lb → kg).
+ * Falls back to scaleIngredientText when there's no quantity/unit to convert,
+ * or the ingredient's unit isn't one this converts (already in that system,
+ * or an ambiguous unit like "tbsp").
+ */
+export function convertIngredientText(ing: Ingredient, factor: number, system: UnitSystem | null): string {
+  if (!system || ing.quantity === undefined || !ing.unit) return scaleIngredientText(ing, factor)
+  const converted = convertQuantityUnit(ing.quantity * factor, ing.unit, system)
+  if (!converted) return scaleIngredientText(ing, factor)
+  const line = [converted.text, ing.item].filter(Boolean).join(' ')
+  return ing.note ? `${line} (${ing.note})` : line
+}
+
 // Measurement units to strip from step prose (not time/temperature words).
 const MEASURE_UNITS =
   'g|kg|mg|ml|l|cl|dl|tbsp|tbs|tbsps|tsp|tsps|oz|lb|lbs|cup|cups|clove|cloves|pinch|pinches|handful|handfuls|slice|slices|can|cans|tin|tins|sprig|sprigs|stick|sticks'

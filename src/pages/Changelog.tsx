@@ -4,6 +4,18 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.10.0',
+    title: 'Unit conversion, accordions, and a tidier action bar',
+    notes: [
+      'Ingredients can now show Metric or Imperial: switch a recipe to lb/oz/cups or to g/kg/ml/l with one tap.',
+      'Ingredients, Method and My Notes are now collapsible sections that open by default, so you can collapse what you are not using. Nutrition stays as is.',
+      'Edit and Delete moved to icon buttons in the sticky bar at the bottom, next to Add to Meal Plan.',
+      'The recipe source now shows the full link instead of just the website name.',
+      'When writing steps, pressing Enter now starts a new step instead of adding a line break (Shift+Enter still adds a line break within a step).',
+      'The New Recipe button no longer wraps onto two lines.',
+    ],
+  },
+  {
     version: '1.9.0',
     title: 'New categories, cleaner text, and photo import',
     notes: [
