@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import Home from './pages/Home'
 import AddRecipe from './pages/AddRecipe'
 import EditRecipe from './pages/EditRecipe'
@@ -13,10 +13,24 @@ import './App.css'
 
 /** Sticky app header: brand, version and the add button. */
 function AppHeader() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const onChangelog = pathname === '/changelog'
+
   return (
     <header className="app-head">
       <Link to="/" className="app-head__title">My Recipes</Link>
-      <Link to="/changelog" className="app-head__version">v{__APP_VERSION__}</Link>
+      <Link
+        to={onChangelog ? pathname : '/changelog'}
+        className="app-head__version"
+        onClick={(e) => {
+          if (!onChangelog) return
+          e.preventDefault()
+          navigate(-1)
+        }}
+      >
+        v{__APP_VERSION__}
+      </Link>
       <div className="app-head__actions">
         <Link to="/add" className="btn-primary btn-primary--sm app-head__add">
           <PlusIcon /> New Recipe
