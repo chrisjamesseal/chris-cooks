@@ -30,7 +30,7 @@
 
 .app-head__actions { display: flex; gap: 6px; align-items: center; }
 .app-head__actions > *:active { transform: scale(0.92); }
-.app-head__add {
+.app-head__actions .app-head__add {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -99,6 +99,34 @@
   margin: 24px 0 8px;
 }
 .muted { color: var(--muted); }
+
+/* Collapsible recipe sections (native <details>, open by default) */
+.recipe-section { margin: 0; }
+.recipe-section summary.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+.recipe-section summary.section-title::-webkit-details-marker { display: none; }
+.recipe-section summary.section-title::marker { content: ''; }
+.recipe-section__chevron {
+  color: var(--muted);
+  font-size: 13px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.recipe-section[open] > summary .recipe-section__chevron { transform: rotate(180deg); }
+.recipe-section__body { padding-top: 2px; }
+
+.unit-toggle { display: flex; gap: 8px; margin: -4px 0 12px; }
+
+.source-link a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
 .page-head {
   display: flex;
   align-items: center;
@@ -431,6 +459,22 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   border-color: #d7263d;
   color: #fff;
 }
+.recipe-action--icon {
+  flex: 0 0 auto;
+  width: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.recipe-action--icon .edit-icon,
+.recipe-action--icon .trash-icon {
+  width: 19px;
+  height: 19px;
+}
+.recipe-action--danger { color: #b3261e; }
+.recipe-action--danger:active { background: #fbeceb; border-color: #f0bcb8; }
 
 /* Favourites: heart button in the home header, hearts on cards */
 .heart-icon { width: 18px; height: 18px; display: block; }

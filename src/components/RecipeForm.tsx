@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import type { MainCategory, Nutrition, Recipe, Step } from '../types'
 import { ingredientsFromText, newId, stripListMarkers, tidyRecipeTitle } from '../lib/recipe'
 import { detectVideoSource } from '../lib/import'
@@ -42,10 +42,13 @@ function AutoTextarea({
   value,
   onChange,
   className = '',
+  textareaRef,
   ...rest
 }: {
   value: string
   onChange: (v: string) => void
+  /** Optional external ref, e.g. so a parent can focus this field programmatically. */
+  textareaRef?: (el: HTMLTextAreaElement | null) => void
 } & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'>) {
   const ref = useRef<HTMLTextAreaElement>(null)
   useLayoutEffect(() => {
@@ -56,7 +59,10 @@ function AutoTextarea({
   }, [value])
   return (
     <textarea
-      ref={ref}
+      ref={(el) => {
+        ref.current = el
+        textareaRef?.(el)
+      }}
       className={`field__input field__input--auto ${className}`.trim()}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -155,6 +161,15 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
   const [draft, setDraft] = useState<RecipeDraft>(() => draftFromRecipe(initial))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Pressing Enter in a step field creates the next step and jumps focus to
+  // it, like a checklist app, rather than adding a newline within the step.
+  const stepRefs = useRef<(HTMLTextAreaElement | null)[]>([])
+  const [focusStepIndex, setFocusStepIndex] = useState<number | null>(null)
+  useEffect(() => {
+    if (focusStepIndex === null) return
+    stepRefs.current[focusStepIndex]?.focus()
+    setFocusStepIndex(null)
+  }, [focusStepIndex, draft.steps.length])
 
   function set<K extends keyof RecipeDraft>(key: K, value: RecipeDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -175,8 +190,17 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
       return { ...d, steps }
     })
   }
+  /** Insert a new empty step right after `index` and focus it. */
+  function addStepAfter(index: number) {
+    setDraft((d) => {
+      const steps = [...d.steps]
+      steps.splice(index + 1, 0, '')
+      return { ...d, steps }
+    })
+    setFocusStepIndex(index + 1)
+  }
   function addStep() {
-    setDraft((d) => ({ ...d, steps: [...d.steps, ''] }))
+    addStepAfter(draft.steps.length - 1)
   }
   function removeStep(i: number) {
     setDraft((d) => ({ ...d, steps: d.steps.filter((_, j) => j !== i) }))
@@ -383,6 +407,15 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
                 value={s}
                 onChange={(v) => setStep(i, v)}
                 placeholder="Describe this step…"
+                textareaRef={(el) => {
+                  stepRefs.current[i] = el
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    addStepAfter(i)
+                  }
+                }}
               />
               {draft.steps.length > 1 && (
                 <button

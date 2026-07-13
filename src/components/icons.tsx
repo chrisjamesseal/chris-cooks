@@ -105,6 +105,47 @@ export function InstagramIcon() {
   )
 }
 
+/** Pencil, for editing a recipe. */
+export function EditIcon() {
+  return (
+    <svg className="edit-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16v4z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <line x1="13.5" y1="6.5" x2="17.5" y2="10.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Trash can, for deleting a recipe. */
+export function TrashIcon() {
+  return (
+    <svg className="trash-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 7h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 /** Miniature Apple-Reminders-style glyph for the shopping list button. */
 export function RemindersIcon() {
   return (
