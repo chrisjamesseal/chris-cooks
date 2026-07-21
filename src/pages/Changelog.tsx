@@ -4,6 +4,15 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.13.0',
+    title: 'Optional cloud sync',
+    notes: [
+      'New optional sync Worker (see worker/README.md): every recipe, favourite, note and the meal plan can now live in one place in the cloud, so opening the app in a new or cleared browser shows everything exactly as you left it.',
+      'Two browsers editing between syncs are merged by which edit is newest, not blindly overwritten, so this is safe to use from more than one device.',
+      'Entirely optional and invisible until set up: without deploying the Worker, nothing changes.',
+    ],
+  },
+  {
     version: '1.12.0',
     title: 'A proper Home Screen icon',
     notes: [

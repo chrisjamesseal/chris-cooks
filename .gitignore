@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Your local Wrangler config for the sync Worker (has your KV namespace id)
+worker/wrangler.sync.toml
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

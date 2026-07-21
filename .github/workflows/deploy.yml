@@ -28,6 +28,9 @@ jobs:
           # Optional: set repo variable VITE_AI_CLEANUP_URL to enable AI cleanup
           # on URL imports (see worker/README.md). Harmless when unset.
           VITE_AI_CLEANUP_URL: ${{ vars.VITE_AI_CLEANUP_URL }}
+          # Optional: set repo variable VITE_SYNC_URL to enable cross-browser
+          # sync (see worker/README.md). Harmless when unset.
+          VITE_SYNC_URL: ${{ vars.VITE_SYNC_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
