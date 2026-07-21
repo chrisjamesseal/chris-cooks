@@ -25,4 +25,9 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      # Not a secret (see functions/README.md) — just the site origin the
+      # functions restrict CORS to. functions/.env is git-ignored (it only
+      # needs to exist on your machine per the manual-deploy instructions),
+      # so a non-interactive CI deploy needs it written here instead.
+      - run: echo "ALLOWED_ORIGIN=${{ vars.ALLOWED_ORIGIN || 'https://chrisjamesseal.github.io' }}" > functions/.env
       - run: npx firebase-tools@latest deploy --only functions --project chris-cooks --non-interactive
