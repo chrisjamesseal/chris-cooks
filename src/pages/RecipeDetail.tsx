@@ -232,7 +232,7 @@ export default function RecipeDetail() {
           // best-effort dedupe
         }
         if (cancelled || !nutrition) return
-        const updated: Recipe = { ...recipe, nutrition }
+        const updated: Recipe = { ...recipe, nutrition, updatedAt: Date.now() }
         await saveRecipe(updated)
         setRecipe(updated)
         flash('Nutrition Added From the Original Recipe ✓')
@@ -336,7 +336,7 @@ export default function RecipeDetail() {
   }
 
   async function toggleFavorite() {
-    const updated: Recipe = { ...loaded, favorite: !loaded.favorite }
+    const updated: Recipe = { ...loaded, favorite: !loaded.favorite, updatedAt: Date.now() }
     await saveRecipe(updated)
     setRecipe(updated)
     flash(updated.favorite ? 'Added to Favourites ♥' : 'Removed From Favourites')
@@ -350,7 +350,7 @@ export default function RecipeDetail() {
 
   async function saveNotes() {
     const notes = notesDraft.trim()
-    const updated: Recipe = { ...loaded, notes: notes || undefined }
+    const updated: Recipe = { ...loaded, notes: notes || undefined, updatedAt: Date.now() }
     await saveRecipe(updated)
     setRecipe(updated)
     setEditingNotes(false)
@@ -366,7 +366,7 @@ export default function RecipeDetail() {
         setEstimateError('Could not estimate from these ingredients. You can add it by hand via Edit.')
         return
       }
-      const updated: Recipe = { ...loaded, nutrition, nutritionEstimated: true }
+      const updated: Recipe = { ...loaded, nutrition, nutritionEstimated: true, updatedAt: Date.now() }
       await saveRecipe(updated)
       setRecipe(updated)
       flash('Nutrition Estimated ✓')

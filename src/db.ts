@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import { parseIngredient, stripListMarkers, tidyCuisine, tidyRecipeTitle, titleCategoryOverride } from './lib/recipe'
+import { recordDeletion, scheduleSync } from './lib/sync'
 import type { Recipe } from './types'
 
 /**
@@ -42,10 +43,27 @@ export async function getRecipe(id: string): Promise<Recipe | undefined> {
 
 export async function saveRecipe(recipe: Recipe): Promise<void> {
   await (await getDB()).put('recipes', recipe)
+  scheduleSync()
 }
 
 export async function deleteRecipe(id: string): Promise<void> {
   await (await getDB()).delete('recipes', id)
+  recordDeletion(id)
+  scheduleSync()
+}
+
+/**
+ * Bulk local write used only by the sync module when merging in the server's
+ * copy — unlike `saveRecipe`/`deleteRecipe`, it never schedules a push, since
+ * the caller (pullAndMerge/pushNow) already handles reconciling with the
+ * server itself.
+ */
+export async function putRecipesLocal(upserts: Recipe[], deleteIds?: Set<string>): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction('recipes', 'readwrite')
+  for (const r of upserts) tx.store.put(r)
+  if (deleteIds) for (const id of deleteIds) tx.store.delete(id)
+  await tx.done
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.

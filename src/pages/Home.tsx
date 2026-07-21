@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ensureSeeded, getAllRecipes, saveRecipe } from '../db'
 import { downloadBackup, restoreBackup } from '../lib/backup'
 import { getPlan, togglePlan } from '../lib/plan'
+import { pullAndMerge } from '../lib/sync'
 import { placeholderEmoji, placeholderGradient } from '../lib/placeholder'
 import { FoodIcon } from '../components/FoodIcon'
 import { CalendarIcon, HeartIcon } from '../components/icons'
@@ -92,8 +93,17 @@ export default function Home() {
   const restoreInput = useRef<HTMLInputElement>(null)
   const period = useMemo(currentMealPeriod, [])
 
+  // Keeps the card badges in sync if the plan changes elsewhere (e.g. a sync
+  // pull adopting a newer plan from another browser).
+  useEffect(() => {
+    const update = () => setPlanIds(new Set(getPlan()))
+    window.addEventListener('planchange', update)
+    return () => window.removeEventListener('planchange', update)
+  }, [])
+
   useEffect(() => {
     ensureSeeded()
+      .then(() => pullAndMerge())
       .then(getAllRecipes)
       .then((list) => {
         list.sort((a, b) => b.updatedAt - a.updatedAt)
