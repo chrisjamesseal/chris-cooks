@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.11.2',
+    title: 'Favicon swapped to a bowl of rice',
+    notes: [
+      'The favicon now shows a bowl of rice instead of a crossed fork and knife, still on the same green background.',
+    ],
+  },
+  {
     version: '1.11.1',
     title: 'A proper favicon',
     notes: [
