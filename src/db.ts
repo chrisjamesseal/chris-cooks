@@ -67,7 +67,7 @@ export async function putRecipesLocal(upserts: Recipe[], deleteIds?: Set<string>
 }
 
 // Bump when the bundled seed set changes to re-seed existing installs.
-const SEED_VERSION = '7'
+const SEED_VERSION = '8'
 const SEED_FLAG = 'chris-cooks:seededVersion'
 const SEED_PREFIX = 'seed-'
 

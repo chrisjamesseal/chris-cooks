@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.9',
+    title: 'Fixed unit errors in nutrition data',
+    notes: [
+      'Audited nutrition on every recipe: sodium was sometimes stored 1000x too low (grams misread as milligrams, e.g. Beef Wellington showing 2.46mg instead of 2460mg) and some recipes showed an absurd "per serving (1g)" when the source only stated a serving count, not a weight. Both are fixed, for the bundled recipes and for future imports.',
+    ],
+  },
+  {
     version: '1.14.8',
     title: 'Fixed wrong nutrition on some URL imports',
     notes: [
