@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.0',
+    title: 'Firebase as a backend option',
+    notes: [
+      'The AI helper and cross-browser sync can now be hosted on Firebase Cloud Functions instead of Cloudflare, for anyone with a Firebase account but no Cloudflare one. Same features, same setup effort, see functions/README.md.',
+    ],
+  },
+  {
     version: '1.13.1',
     title: 'Cheaper AI helper',
     notes: [

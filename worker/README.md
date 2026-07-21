@@ -1,7 +1,14 @@
 This app is a static site, so the two things it can't do in the browser alone
 (hold an API key, give every browser the same recipe collection) each get a
-tiny optional Cloudflare Worker. Both are independent — deploy either, both,
-or neither.
+tiny optional backend. Both are independent — deploy either, both, or
+neither. Two hosting options, same behavior either way:
+
+- **Cloudflare Workers** (this file) — if you have a Cloudflare account.
+- **Firebase Cloud Functions** (see `functions/README.md`) — if you have a
+  Firebase account instead. Same two features, same request/response format,
+  just backed by Firestore instead of Cloudflare KV for sync.
+
+Pick whichever you already have an account for — no need for both.
 
 # AI import cleanup Worker (optional)
 
