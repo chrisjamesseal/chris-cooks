@@ -4,6 +4,14 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.12.0',
+    title: 'A proper Home Screen icon',
+    notes: [
+      'Add to Home Screen on iPhone now shows the green bowl-of-rice icon instead of a blank page thumbnail.',
+      'Opened from the Home Screen, the app now launches full-screen without the Safari address bar, as it always meant to.',
+    ],
+  },
+  {
     version: '1.11.2',
     title: 'Favicon swapped to a bowl of rice',
     notes: [
