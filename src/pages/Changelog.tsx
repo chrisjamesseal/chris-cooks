@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.1',
+    title: 'AI helper and sync are live',
+    notes: [
+      'The AI import helper and cross-browser sync are now switched on for real, backed by the Firebase Cloud Functions set up for this app.',
+    ],
+  },
+  {
     version: '1.14.0',
     title: 'Firebase as a backend option',
     notes: [
