@@ -1104,11 +1104,23 @@ a.btn-primary { display: inline-block; text-decoration: none; }
   font-size: 14px;
   margin: 0;
 }
+/* Sticky Save/Cancel bar above the bottom nav, so it's always reachable on a long form */
 .form-actions {
+  position: sticky;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  z-index: 10;
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: 20px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+@media (display-mode: standalone) {
+  .form-actions { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 .form-actions .btn-primary,
 .form-actions .btn-ghost,

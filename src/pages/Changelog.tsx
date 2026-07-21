@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.7',
+    title: 'Sticky save bar on the recipe form',
+    notes: [
+      'Save Changes and Cancel now float above the bottom nav on the add/edit recipe page, so they stay within reach on long recipes instead of only appearing at the very end of the form.',
+    ],
+  },
+  {
     version: '1.14.6',
     title: 'Split a step mid-sentence',
     notes: [
