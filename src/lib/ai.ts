@@ -27,6 +27,25 @@ export function aiEndpoint(): string | undefined {
 
 export class AiError extends Error {}
 
+const NUTRITION_KEYS: (keyof Nutrition)[] = [
+  'calories', 'proteinG', 'carbsG', 'fatG', 'satFatG', 'sugarG', 'fiberG', 'sodiumMg',
+]
+
+/**
+ * Pull the known nutrition fields out of a raw AI response object, keeping
+ * only finite non-negative numbers. Returns null if nothing usable (no
+ * calories figure) came through.
+ */
+export function nutritionFromAiResponse(data: Record<string, unknown> | null | undefined): Nutrition | null {
+  if (!data) return null
+  const nutrition: Nutrition = {}
+  for (const k of NUTRITION_KEYS) {
+    const v = data[k]
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) nutrition[k] = Math.round(v * 10) / 10
+  }
+  return nutrition.calories ? nutrition : null
+}
+
 /**
  * Estimate per-serving nutrition from a recipe's ingredients when the source
  * doesn't publish any. Returns null (never throws for the caller to swallow)
@@ -52,21 +71,13 @@ export async function estimateNutrition(recipe: Recipe): Promise<Nutrition | nul
     return null
   }
   if (!res.ok) return null
-  let data: Record<string, number | null>
+  let data: Record<string, unknown>
   try {
-    data = (await res.json()) as Record<string, number | null>
+    data = (await res.json()) as Record<string, unknown>
   } catch {
     return null
   }
-  const keys: (keyof Nutrition)[] = [
-    'calories', 'proteinG', 'carbsG', 'fatG', 'satFatG', 'sugarG', 'fiberG', 'sodiumMg',
-  ]
-  const nutrition: Nutrition = {}
-  for (const k of keys) {
-    const v = data[k]
-    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) nutrition[k] = Math.round(v * 10) / 10
-  }
-  return nutrition.calories ? nutrition : null
+  return nutritionFromAiResponse(data)
 }
 
 export async function makeHealthier(recipe: Recipe, priority: HealthPriority): Promise<HealthierResult> {

@@ -1,5 +1,6 @@
 import type { Ingredient, MainCategory, Nutrition, Recipe, Step } from '../types'
 import { newId, parseIngredient, stripListMarkers, tidyCuisine, tidyRecipeTitle, titleCategoryOverride } from './recipe'
+import { nutritionFromAiResponse } from './ai'
 
 /**
  * Recipe import: fetch a page and pull structured recipe data out of its
@@ -578,6 +579,7 @@ async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): P
       prep?: string | null
       cook?: string | null
       image?: string | null
+      nutrition?: Record<string, unknown> | null
     }
     const ingredients = Array.isArray(data.ingredients)
       ? data.ingredients.map((l) => parseIngredient(cleanText(String(l)))).filter((i) => i.raw)
@@ -608,6 +610,7 @@ async function aiVideoImport(url: string, sourceType: 'tiktok' | 'instagram'): P
       },
       ingredients,
       steps,
+      nutrition: nutritionFromAiResponse(data.nutrition) ?? undefined,
       createdAt: now,
       updatedAt: now,
     }
@@ -692,6 +695,7 @@ export async function importRecipeFromImage(file: File): Promise<Recipe> {
     cuisine?: string | null
     prep?: string | null
     cook?: string | null
+    nutrition?: Record<string, unknown> | null
   }
   const ingredients = Array.isArray(data.ingredients)
     ? data.ingredients.map((l) => parseIngredient(cleanText(String(l)))).filter((i) => i.raw)
@@ -722,6 +726,7 @@ export async function importRecipeFromImage(file: File): Promise<Recipe> {
     },
     ingredients,
     steps,
+    nutrition: nutritionFromAiResponse(data.nutrition) ?? undefined,
     createdAt: now,
     updatedAt: now,
   }
