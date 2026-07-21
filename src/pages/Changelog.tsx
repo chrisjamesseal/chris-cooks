@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.5',
+    title: 'Fuller TikTok captions',
+    notes: [
+      'TikTok video import now also checks the video\'s oEmbed data for the caption, since the page\'s normal caption field is often cut short, missing serving counts and nutrition figures that are stated later on. Fixes servings and nutrition sometimes coming through wrong or missing.',
+    ],
+  },
+  {
     version: '1.14.4',
     title: 'Automatic backend deploys',
     notes: [
