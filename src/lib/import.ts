@@ -48,11 +48,39 @@ function isRecipeType(type: unknown): boolean {
   return false
 }
 
+function canonicalPath(url: string): string {
+  try {
+    const u = new URL(normalizeUrl(url))
+    return `${u.hostname.replace(/^www\./, '')}${u.pathname.replace(/\/$/, '')}`.toLowerCase()
+  } catch {
+    return url.trim().toLowerCase()
+  }
+}
+
+/**
+ * Some recipe pages (BBC Food included) embed more than one Recipe JSON-LD
+ * node on the same page — e.g. a "related recipes" carousel that markup
+ * each teaser as its own Recipe — so blindly taking the first node found
+ * can silently pull a different dish's ingredients/nutrition. Prefer
+ * whichever node's own `url`/`mainEntityOfPage` matches the page we
+ * actually fetched; fall back to the first node when that's inconclusive
+ * (the common case of a page with only one recipe on it anyway).
+ */
+function pickRecipeNode(nodes: Json[], sourceUrl: string): Json | undefined {
+  if (nodes.length <= 1) return nodes[0]
+  const target = canonicalPath(sourceUrl)
+  const matched = nodes.find((n) => {
+    const u = firstString(n.url) || firstString(n.mainEntityOfPage?.['@id']) || firstString(n.mainEntityOfPage)
+    return u && canonicalPath(u) === target
+  })
+  return matched ?? nodes[0]
+}
+
 /** Parse recipe data out of a page's HTML. Returns null if none is found. */
 export function parseRecipeFromHtml(html: string, sourceUrl: string): Recipe | null {
   const nodes: Json[] = []
   for (const block of extractJsonLdBlocks(html)) collectRecipeNodes(block, nodes)
-  const node = nodes[0]
+  const node = pickRecipeNode(nodes, sourceUrl)
   if (!node) return null
   return mapNodeToRecipe(node, sourceUrl)
 }
@@ -315,11 +343,9 @@ export async function fetchNutritionFromSource(url: string): Promise<Nutrition |
     }
     const nodes: Json[] = []
     for (const block of extractJsonLdBlocks(html)) collectRecipeNodes(block, nodes)
-    for (const node of nodes) {
-      const nutrition = mapNutrition(node.nutrition)
-      if (nutrition?.calories) return nutrition
-    }
-    return null // page reached but it declares no nutrition
+    const node = pickRecipeNode(nodes, target)
+    const nutrition = node ? mapNutrition(node.nutrition) : undefined
+    return nutrition?.calories ? nutrition : null // page reached but it declares no (matching) nutrition
   }
   return null
 }
