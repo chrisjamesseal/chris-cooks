@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.6',
+    title: 'Split a step mid-sentence',
+    notes: [
+      'Pressing Enter partway through a step now splits it right there, everything after the cursor moves into a new step, instead of always adding a blank one at the end.',
+    ],
+  },
+  {
     version: '1.14.5',
     title: 'Fuller TikTok captions',
     notes: [
