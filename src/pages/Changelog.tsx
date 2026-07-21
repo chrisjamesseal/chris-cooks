@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.8',
+    title: 'Fixed wrong nutrition on some URL imports',
+    notes: [
+      'Recipe pages that embed more than one recipe (e.g. a "related recipes" carousel alongside the main one) could have their nutrition, and occasionally ingredients, mixed up with a different dish on the same page. Import now matches the recipe whose own web address matches the page you actually pasted in.',
+    ],
+  },
+  {
     version: '1.14.7',
     title: 'Sticky save bar on the recipe form',
     notes: [
