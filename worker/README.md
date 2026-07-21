@@ -76,8 +76,9 @@ no behavior change.
 
 ## Notes
 
-- The Worker uses `claude-opus-4-8`. To reduce cost/latency, change `MODEL` in
-  `ai-cleanup.js` to `claude-haiku-4-5` — plenty capable for text cleanup.
+- The Worker uses `claude-haiku-4-5` for speed and low cost. For sharper
+  results on the video/photo import modes (they lean on vision quality),
+  change `MODEL` in `ai-cleanup.js` to `claude-opus-4-8`.
 - Cleanup is best-effort: if the Worker is slow, errors, or returns something
   unexpected, the import falls back to the raw scraped text.
 

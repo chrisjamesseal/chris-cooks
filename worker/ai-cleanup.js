@@ -10,7 +10,7 @@
  * URL when building the app to activate cleanup on URL imports.
  */
 
-const MODEL = 'claude-opus-4-8' // swap to 'claude-haiku-4-5' in your Worker if you'd prefer cheaper/faster cleanup
+const MODEL = 'claude-haiku-4-5' // fast and inexpensive; swap to 'claude-opus-4-8' for sharper video/photo import quality
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
 const SYSTEM = `You clean up recipe text that was scraped from a web page. Fix obvious OCR/formatting errors, spelling mistakes, stray HTML entities, and odd spacing. Split any ingredient line that actually contains multiple ingredients into separate lines. Do NOT invent, add, remove, or reword the actual cooking content — only correct how it is written. Preserve quantities and units exactly. Return the same recipe, cleaned.`
