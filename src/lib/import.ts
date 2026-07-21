@@ -137,17 +137,40 @@ function mapNutrition(node: Json): Nutrition | undefined {
     const m = s.replace(',', '.').match(/[\d.]+/)
     return m ? Number(m[0]) : undefined
   }
+  // schema.org's own spec says sodium/cholesterol content is already in
+  // milligrams, but plenty of real recipe sites publish it in grams instead
+  // (e.g. "2.46g") — trust an explicit unit suffix over the spec when given,
+  // converting g/kg to mg, rather than taking the bare number at face value.
+  const numMg = (v: Json): number | undefined => {
+    const s = firstString(v)
+    if (typeof v === 'number') return Number.isFinite(v) ? v : undefined
+    if (!s) return undefined
+    const m = s.replace(',', '.').match(/([\d.]+)\s*(k?g|mg)?/i)
+    if (!m) return undefined
+    const n = Number(m[1])
+    if (!Number.isFinite(n)) return undefined
+    const unit = (m[2] ?? '').toLowerCase()
+    if (unit === 'kg') return n * 1_000_000
+    if (unit === 'g') return n * 1000
+    return n
+  }
   nutrition.calories = num(node.calories)
   nutrition.fatG = num(node.fatContent)
   nutrition.satFatG = num(node.saturatedFatContent)
-  nutrition.cholesterolMg = num(node.cholesterolContent)
-  nutrition.sodiumMg = num(node.sodiumContent)
+  nutrition.cholesterolMg = numMg(node.cholesterolContent)
+  nutrition.sodiumMg = numMg(node.sodiumContent)
   nutrition.carbsG = num(node.carbohydrateContent)
   nutrition.fiberG = num(node.fiberContent)
   nutrition.sugarG = num(node.sugarContent)
   nutrition.proteinG = num(node.proteinContent)
-  const size = num(node.servingSize)
-  if (size !== undefined) nutrition.servingSizeG = size
+  // servingSize is often just a plain count ("1", meaning "1 portion") rather
+  // than a weight — only trust it as grams when the source text actually
+  // says so, instead of storing a nonsensical "1g" serving size.
+  const sizeMatch = firstString(node.servingSize)?.match(/([\d.]+)\s*(kg|g)\b/i)
+  if (sizeMatch) {
+    const n = Number(sizeMatch[1])
+    if (Number.isFinite(n)) nutrition.servingSizeG = sizeMatch[2].toLowerCase() === 'kg' ? n * 1000 : n
+  }
   const hasAny = Object.values(nutrition).some((v) => v !== undefined)
   return hasAny ? nutrition : undefined
 }
