@@ -199,6 +199,17 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
     })
     setFocusStepIndex(index + 1)
   }
+  /** Split the step at `index` at `cursorPos`: text before stays put, text after moves into a new step right after, focused. */
+  function splitStepAt(index: number, cursorPos: number) {
+    setDraft((d) => {
+      const steps = [...d.steps]
+      const text = steps[index]
+      steps[index] = text.slice(0, cursorPos)
+      steps.splice(index + 1, 0, text.slice(cursorPos))
+      return { ...d, steps }
+    })
+    setFocusStepIndex(index + 1)
+  }
   function addStep() {
     addStepAfter(draft.steps.length - 1)
   }
@@ -413,7 +424,7 @@ export default function RecipeForm({ initial, submitLabel, onSubmit, onCancel }:
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
-                    addStepAfter(i)
+                    splitStepAt(i, e.currentTarget.selectionStart ?? s.length)
                   }
                 }}
               />
