@@ -1,0 +1,16 @@
+{
+  "name": "chris-cooks-functions",
+  "private": true,
+  "description": "Firebase Cloud Functions backing Chris Cooks: AI import cleanup + cross-browser sync.",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}
