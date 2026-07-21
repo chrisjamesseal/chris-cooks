@@ -254,6 +254,25 @@ async function handleNutritionEstimate(body, env, cors) {
   return json(out, 200, cors)
 }
 
+/**
+ * TikTok's og:description meta tag wraps the caption as `N Likes, N
+ * Comments. TikTok video from X (@handle): "..."` and truncates long
+ * captions — which cuts off exactly the kind of detail (serving count,
+ * nutrition breakdown) that tends to sit at the end. The public oEmbed
+ * endpoint's `title` field carries the same caption without that wrapper
+ * and isn't truncated the same way, so prefer whichever text is longer.
+ */
+async function fetchOembedCaption(url) {
+  try {
+    const r = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`)
+    if (!r.ok) return ''
+    const j = await r.json()
+    return typeof j.title === 'string' ? j.title : ''
+  } catch {
+    return ''
+  }
+}
+
 async function handleVideoImport(body, env, cors) {
   const url = typeof body.url === 'string' ? body.url.trim() : ''
   if (!/^https:\/\/([\w-]+\.)*(instagram\.com|instagr\.am|tiktok\.com)\//i.test(url)) {
@@ -278,9 +297,13 @@ async function handleVideoImport(body, env, cors) {
       html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']${prop}["']`, 'i'))
     return m ? decodeEntities(m[1]) : ''
   }
-  const caption = meta('og:description')
+  let caption = meta('og:description')
   const pageTitle = meta('og:title')
   const imageUrl = meta('og:image')
+  if (/tiktok\.com/i.test(url)) {
+    const oembedCaption = await fetchOembedCaption(url)
+    if (oembedCaption.length > caption.length) caption = oembedCaption
+  }
   if (!caption && !imageUrl) {
     return json({ error: 'Could not read a caption or image from that page' }, 502, cors)
   }
