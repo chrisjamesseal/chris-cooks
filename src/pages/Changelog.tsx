@@ -4,6 +4,15 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.2',
+    title: 'Faster loading, honest video imports',
+    notes: [
+      'Fixed recipes taking ages to load: syncing no longer blocks the list from showing, your recipes appear immediately and sync quietly in the background.',
+      'TikTok/Instagram video import no longer invents ingredients or steps when the caption and cover photo do not actually show them, it now tells you to copy the caption manually instead of guessing.',
+      'AI-imported recipes (video and photo) are now consistently Title Case, with no more shouty ALL CAPS section labels sneaking into the ingredient list.',
+    ],
+  },
+  {
     version: '1.14.1',
     title: 'AI helper and sync are live',
     notes: [

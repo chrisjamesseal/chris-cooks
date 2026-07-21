@@ -102,13 +102,19 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    ensureSeeded()
-      .then(() => pullAndMerge())
-      .then(getAllRecipes)
-      .then((list) => {
+    // Show what's already stored locally right away — sync is a network
+    // round-trip of the whole collection (every recipe, every photo), so it
+    // must never block the first paint. It runs after, in the background,
+    // and only triggers a second render if it actually changed something.
+    const load = () =>
+      getAllRecipes().then((list) => {
         list.sort((a, b) => b.updatedAt - a.updatedAt)
         setRecipes(list)
       })
+    ensureSeeded()
+      .then(load)
+      .then(() => pullAndMerge())
+      .then(load)
   }, [])
 
   async function handleBackup() {
