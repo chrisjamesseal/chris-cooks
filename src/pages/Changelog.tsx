@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.13.1',
+    title: 'Cheaper AI helper',
+    notes: [
+      'The AI import-cleanup Worker now defaults to a faster, much cheaper model, since it holds up well for tidying scraped text.',
+    ],
+  },
+  {
     version: '1.13.0',
     title: 'Optional cloud sync',
     notes: [
