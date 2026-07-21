@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.4',
+    title: 'Automatic backend deploys',
+    notes: [
+      'Firebase Cloud Functions now deploy automatically on every push to main, using a key stored securely in GitHub. No more one-off key handoffs for future backend changes, see functions/README.md.',
+    ],
+  },
+  {
     version: '1.14.3',
     title: 'Nutrition from video and photo imports',
     notes: [

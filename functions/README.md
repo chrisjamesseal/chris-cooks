@@ -26,6 +26,28 @@ either way you host this).
 
 ## Deploy
 
+**Automatic (recommended):** `.github/workflows/deploy-functions.yml` deploys
+this folder to Firebase on every push to `main` that touches `functions/**`,
+using a service account key stored as the `FIREBASE_SERVICE_ACCOUNT` GitHub
+repo secret. Set it up once:
+
+1. Firebase console → Project settings → Service accounts → **Generate new
+   private key** (downloads a JSON file).
+2. GitHub repo → Settings → Secrets and variables → Actions → **New
+   repository secret** → name it `FIREBASE_SERVICE_ACCOUNT`, paste the
+   entire JSON file as the value.
+3. Delete the downloaded JSON file from your computer — GitHub now holds it
+   encrypted, and no one (including Claude) needs to see it again for future
+   deploys. The secrets and one-time setup steps below (Blaze plan, API
+   secrets, Firestore) still need doing once by hand first.
+
+After that, changing anything in `functions/` and merging to `main` deploys
+it automatically — no key handoff needed ever again. You can also trigger a
+deploy manually from the Actions tab (**Deploy Firebase Functions** →
+Run workflow) without waiting for a functions change.
+
+**Manual (alternative):**
+
 1. Install the Firebase CLI and log in:
    ```sh
    npm i -g firebase-tools
