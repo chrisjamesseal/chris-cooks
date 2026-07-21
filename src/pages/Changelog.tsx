@@ -4,6 +4,13 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.14.3',
+    title: 'Nutrition from video and photo imports',
+    notes: [
+      'Video and photo import now picks up nutrition info (calories, protein, etc.) when it is actually stated in the caption or visible on a nutrition label, instead of leaving it blank. It is never guessed or calculated, only used when explicitly given.',
+    ],
+  },
+  {
     version: '1.14.2',
     title: 'Faster loading, honest video imports',
     notes: [

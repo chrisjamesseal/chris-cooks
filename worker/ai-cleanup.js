@@ -51,30 +51,33 @@ const CLEANUP_SCHEMA = {
 
 const NUTRITION_SYSTEM = `You estimate per-serving nutrition for a home recipe from its ingredient list and servings count, using standard food-composition data (USDA / McCance & Widdowson). Compute totals across all ingredients, divide by servings, and round sensibly. Be conservative and realistic; cooked weights and reasonable assumptions for unspecified sizes are fine. If most ingredient lines have no usable quantities, return null for every field instead of guessing.`
 
+const NUTRITION_FIELDS = ['calories', 'proteinG', 'carbsG', 'fatG', 'satFatG', 'sugarG', 'fiberG', 'sodiumMg']
+const NUTRITION_PROPERTIES = {
+  calories: { type: ['number', 'null'] },
+  proteinG: { type: ['number', 'null'] },
+  carbsG: { type: ['number', 'null'] },
+  fatG: { type: ['number', 'null'] },
+  satFatG: { type: ['number', 'null'] },
+  sugarG: { type: ['number', 'null'] },
+  fiberG: { type: ['number', 'null'] },
+  sodiumMg: { type: ['number', 'null'] },
+}
+
 const NUTRITION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['calories', 'proteinG', 'carbsG', 'fatG', 'satFatG', 'sugarG', 'fiberG', 'sodiumMg'],
-  properties: {
-    calories: { type: ['number', 'null'] },
-    proteinG: { type: ['number', 'null'] },
-    carbsG: { type: ['number', 'null'] },
-    fatG: { type: ['number', 'null'] },
-    satFatG: { type: ['number', 'null'] },
-    sugarG: { type: ['number', 'null'] },
-    fiberG: { type: ['number', 'null'] },
-    sodiumMg: { type: ['number', 'null'] },
-  },
+  required: NUTRITION_FIELDS,
+  properties: NUTRITION_PROPERTIES,
 }
 
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Sauce', 'Soup', 'Salad', 'Dessert', 'Snack']
 
-const VIDEO_SYSTEM = `You extract a structured recipe from a social cooking video's public data: its caption text and its cover image. Only use ingredients, quantities and steps that are actually stated in the caption or clearly legible as on-screen text in the cover image — never invent or infer a method, ingredient, or quantity that isn't actually shown there; leaving something out is better than guessing. The dish name is often only shown on-screen, so use the cover image to identify it — "title" must be a short, appetising dish name in Title Case (no emojis, no the word "recipe", no creator handles or stats, and no guessed spelling — if on-screen text is too stylised or blurry to read with confidence, use a simple descriptive name instead of a misread one). If the caption lists ingredients, preserve their exact quantities and wording. If neither the caption nor the image gives you a real method, return an empty steps array rather than writing one from guesswork. servings: as stated, else 1 — do not guess a number. category: exactly one of ${CATEGORIES.join(', ')} — use Sauce/Soup/Salad/Side when that is genuinely what the dish is, not just an ingredient in a larger meal. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if clearly stated, else null. Write every ingredient and step in normal sentence case, never in all caps, and never include a section label (e.g. "SAUCE", "FOR THE TOPPING") as its own ingredient or step entry — fold it into the surrounding text or drop it.`
+const VIDEO_SYSTEM = `You extract a structured recipe from a social cooking video's public data: its caption text and its cover image. Only use ingredients, quantities and steps that are actually stated in the caption or clearly legible as on-screen text in the cover image — never invent or infer a method, ingredient, or quantity that isn't actually shown there; leaving something out is better than guessing. The dish name is often only shown on-screen, so use the cover image to identify it — "title" must be a short, appetising dish name in Title Case (no emojis, no the word "recipe", no creator handles or stats, and no guessed spelling — if on-screen text is too stylised or blurry to read with confidence, use a simple descriptive name instead of a misread one). If the caption lists ingredients, preserve their exact quantities and wording. If neither the caption nor the image gives you a real method, return an empty steps array rather than writing one from guesswork. servings: as stated, else 1 — do not guess a number. category: exactly one of ${CATEGORIES.join(', ')} — use Sauce/Soup/Salad/Side when that is genuinely what the dish is, not just an ingredient in a larger meal. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if clearly stated, else null. Write every ingredient and step in normal sentence case, never in all caps, and never include a section label (e.g. "SAUCE", "FOR THE TOPPING") as its own ingredient or step entry — fold it into the surrounding text or drop it. nutrition: many cooking videos state per-serving macros (e.g. "450 cal, 40g protein"), often near the end of the caption — if any figures are explicitly stated there, extract exactly those numbers into the matching fields; never calculate or estimate nutrition yourself, and leave any field not explicitly stated as null.`
 
 const VIDEO_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['title', 'ingredients', 'steps', 'servings', 'category', 'cuisine', 'prep', 'cook'],
+  required: ['title', 'ingredients', 'steps', 'servings', 'category', 'cuisine', 'prep', 'cook', 'nutrition'],
   properties: {
     title: { type: 'string' },
     ingredients: { type: 'array', items: { type: 'string' } },
@@ -84,10 +87,11 @@ const VIDEO_SCHEMA = {
     cuisine: { type: ['string', 'null'] },
     prep: { type: ['string', 'null'] },
     cook: { type: ['string', 'null'] },
+    nutrition: NUTRITION_SCHEMA,
   },
 }
 
-const IMAGE_SYSTEM = `You extract a structured recipe from a photo — this could be a cookbook page, a handwritten recipe card, a printed recipe, or a screenshot of a recipe website or app. Read the image carefully and transcribe the recipe faithfully; do not invent quantities or steps that aren't shown. "title" must be a short, clean dish name in Title Case (no emojis, no the word "recipe"). Preserve ingredient quantities and units exactly as written. If the method is numbered in the photo, keep it as separate steps in the same order. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of ${CATEGORIES.join(', ')}. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated, else null. Write every ingredient and step in normal sentence case, never in all caps, and never include a section label (e.g. "SAUCE", "FOR THE TOPPING") as its own ingredient or step entry — fold it into the surrounding text or drop it. If the image does not contain a readable recipe at all, return every field as an empty string/array (title: "", ingredients: [], steps: []) rather than guessing.`
+const IMAGE_SYSTEM = `You extract a structured recipe from a photo — this could be a cookbook page, a handwritten recipe card, a printed recipe, or a screenshot of a recipe website or app. Read the image carefully and transcribe the recipe faithfully; do not invent quantities or steps that aren't shown. "title" must be a short, clean dish name in Title Case (no emojis, no the word "recipe"). Preserve ingredient quantities and units exactly as written. If the method is numbered in the photo, keep it as separate steps in the same order. servings: as stated, or your best estimate (integer, minimum 1). category: exactly one of ${CATEGORIES.join(', ')}. cuisine: a single lowercase word (e.g. "italian") or null. prep/cook: human-friendly durations like "10 min" ONLY if stated, else null. Write every ingredient and step in normal sentence case, never in all caps, and never include a section label (e.g. "SAUCE", "FOR THE TOPPING") as its own ingredient or step entry — fold it into the surrounding text or drop it. nutrition: if a nutrition panel or per-serving macro breakdown (e.g. "450 cal, 40g protein") is visible in the photo, extract exactly those numbers into the matching fields; never calculate or estimate nutrition yourself, and leave any field not explicitly shown as null. If the image does not contain a readable recipe at all, return every field as an empty string/array (title: "", ingredients: [], steps: []) rather than guessing.`
 
 const IMAGE_SCHEMA = VIDEO_SCHEMA
 
