@@ -4,6 +4,17 @@ type Release = { version: string; title: string; notes: string[] }
 
 const RELEASES: Release[] = [
   {
+    version: '1.15.0',
+    title: 'Smarter nutrition section',
+    notes: [
+      'The AI pass now fills every gap: recipes with partial data (say, just calories from the source page) get their missing protein, carbs, fat and more estimated, while real values from the source are always kept. Run it from the Nutrition tab.',
+      'Each nutrition value now shows its share of an adult\'s daily reference intake, so 18g of fat reads as "26%" rather than a bare number.',
+      'A protein/carbs/fat bar at the top of every nutrition panel shows where a serving\'s calories come from at a glance.',
+      'On a recipe with partial data, a "Fill In Missing Values" button estimates just what\'s absent.',
+      'Removed the misleading total-calories figure from the meal plan card (summing one serving of each planned meal wasn\'t a number that meant much).',
+    ],
+  },
+  {
     version: '1.14.9',
     title: 'Fixed unit errors in nutrition data',
     notes: [

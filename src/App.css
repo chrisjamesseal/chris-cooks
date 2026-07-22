@@ -1026,6 +1026,38 @@ a.btn-primary { display: inline-block; text-decoration: none; }
 .nutrition-row:first-child { border-top: 0; }
 .nutrition-row dt { color: var(--muted); }
 .nutrition-row dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.nutrition-row__ri { color: var(--muted); font-weight: 500; font-size: 13px; }
+.nutri-ri-note { margin-top: 8px; }
+
+/* Where a serving's calories come from: protein vs carbs vs fat. Identity is
+   carried by the ordered legend labels, never by colour alone. */
+.macro-split { margin-bottom: 12px; }
+.macro-split__bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.macro-split__seg { min-width: 3px; }
+.macro--protein { background: #0b8a4a; }
+.macro--carbs { background: #3a6ea5; }
+.macro--fat { background: #d97e2c; }
+.macro-split__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.macro-split__key { display: inline-flex; align-items: center; gap: 5px; }
+.macro-split__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
 
 /* Form */
 .recipe-form { display: grid; gap: 16px; }

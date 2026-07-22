@@ -12,9 +12,10 @@ import {
 } from '../lib/recipe'
 import {
   aiEndpoint,
-  estimateNutrition,
+  completeNutrition,
   HEALTH_PRIORITIES,
   makeHealthier,
+  nutritionIsIncomplete,
   type HealthierResult,
   type HealthPriority,
 } from '../lib/ai'
@@ -37,17 +38,38 @@ import {
 } from '../components/icons'
 import type { Ingredient, Nutrition, Recipe } from '../types'
 
-const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string }[] = [
-  { key: 'calories', label: 'Calories', unit: 'kcal' },
-  { key: 'fatG', label: 'Fat', unit: 'g' },
-  { key: 'satFatG', label: 'Saturates', unit: 'g' },
-  { key: 'carbsG', label: 'Carbs', unit: 'g' },
-  { key: 'sugarG', label: 'Sugars', unit: 'g' },
-  { key: 'fiberG', label: 'Fibre', unit: 'g' },
-  { key: 'proteinG', label: 'Protein', unit: 'g' },
-  { key: 'sodiumMg', label: 'Sodium', unit: 'mg' },
+// `ri` is the UK adult daily reference intake, used to show each value in
+// context ("18g fat · 26% RI"). Fibre uses the NHS 30g/day guideline; sodium
+// is the 6g-salt guideline expressed as sodium. Cholesterol has no RI.
+const NUTRITION_ROWS: { key: keyof Nutrition; label: string; unit: string; ri?: number }[] = [
+  { key: 'calories', label: 'Calories', unit: 'kcal', ri: 2000 },
+  { key: 'fatG', label: 'Fat', unit: 'g', ri: 70 },
+  { key: 'satFatG', label: 'Saturates', unit: 'g', ri: 20 },
+  { key: 'carbsG', label: 'Carbs', unit: 'g', ri: 260 },
+  { key: 'sugarG', label: 'Sugars', unit: 'g', ri: 90 },
+  { key: 'fiberG', label: 'Fibre', unit: 'g', ri: 30 },
+  { key: 'proteinG', label: 'Protein', unit: 'g', ri: 50 },
+  { key: 'sodiumMg', label: 'Sodium', unit: 'mg', ri: 2400 },
   { key: 'cholesterolMg', label: 'Cholesterol', unit: 'mg' },
 ]
+
+/**
+ * Share of a serving's calories from each macro (protein/carbs 4 kcal per g,
+ * fat 9). Null when the macros aren't complete enough to be honest about it.
+ */
+function macroSplit(n: Nutrition): { label: string; pct: number; cls: string }[] | null {
+  if (n.proteinG === undefined || n.carbsG === undefined || n.fatG === undefined) return null
+  const protein = n.proteinG * 4
+  const carbs = n.carbsG * 4
+  const fat = n.fatG * 9
+  const total = protein + carbs + fat
+  if (total <= 0) return null
+  return [
+    { label: 'Protein', pct: Math.round((protein / total) * 100), cls: 'macro--protein' },
+    { label: 'Carbs', pct: Math.round((carbs / total) * 100), cls: 'macro--carbs' },
+    { label: 'Fat', pct: Math.round((fat / total) * 100), cls: 'macro--fat' },
+  ]
+}
 
 // Ticked ingredients, step progress and servings survive reloads — you can
 // close the app mid-shop or mid-cook and pick up where you left off.
@@ -361,7 +383,8 @@ export default function RecipeDetail() {
     setEstimating(true)
     setEstimateError(null)
     try {
-      const nutrition = await estimateNutrition(loaded)
+      // Fills only the gaps — any values the source actually stated are kept.
+      const nutrition = await completeNutrition(loaded)
       if (!nutrition) {
         setEstimateError('Could not estimate from these ingredients. You can add it by hand via Edit.')
         return
@@ -369,7 +392,7 @@ export default function RecipeDetail() {
       const updated: Recipe = { ...loaded, nutrition, nutritionEstimated: true, updatedAt: Date.now() }
       await saveRecipe(updated)
       setRecipe(updated)
-      flash('Nutrition Estimated ✓')
+      flash('Nutrition Filled In ✓')
     } catch {
       setEstimateError('Something went wrong. Please try again.')
     } finally {
@@ -425,6 +448,7 @@ export default function RecipeDetail() {
   const nutritionRows = recipe.nutrition
     ? NUTRITION_ROWS.filter(({ key }) => recipe.nutrition![key] !== undefined)
     : []
+  const macros = recipe.nutrition ? macroSplit(recipe.nutrition) : null
 
   const video = videoInfoFromUrl(recipe.source?.url)
   const tips = healthierTips(recipe)
@@ -702,19 +726,53 @@ export default function RecipeDetail() {
         <div className="recipe-section__body">
         {nutritionRows.length > 0 ? (
           <>
+            {macros && (
+              <div className="macro-split">
+                <div className="macro-split__bar" aria-hidden="true">
+                  {macros.map((m) => (
+                    <span key={m.label} className={`macro-split__seg ${m.cls}`} style={{ width: `${m.pct}%` }} />
+                  ))}
+                </div>
+                <p className="macro-split__legend">
+                  {macros.map((m) => (
+                    <span key={m.label} className="macro-split__key">
+                      <span className={`macro-split__dot ${m.cls}`} aria-hidden="true" />
+                      {m.label} {m.pct}%
+                    </span>
+                  ))}
+                </p>
+              </div>
+            )}
             <dl className="nutrition-table">
-              {nutritionRows.map(({ key, label, unit }) => (
+              {nutritionRows.map(({ key, label, unit, ri }) => (
                 <div className="nutrition-row" key={key}>
                   <dt>{label}</dt>
                   <dd>
                     {recipe.nutrition![key]}
                     {unit}
+                    {ri && (
+                      <span className="nutrition-row__ri"> · {Math.round((recipe.nutrition![key]! / ri) * 100)}%</span>
+                    )}
                   </dd>
                 </div>
               ))}
             </dl>
+            <p className="scale-note nutri-ri-note">% is the share of an adult's daily reference intake.</p>
             {recipe.nutritionEstimated && (
-              <p className="scale-note nutri-estimate-note">≈ Estimated from the ingredients, not from the original recipe.</p>
+              <p className="scale-note nutri-estimate-note">≈ Includes values estimated from the ingredients, not from the original recipe.</p>
+            )}
+            {aiOn && nutritionIsIncomplete(recipe.nutrition) && (
+              <div className="nutri-empty">
+                <button
+                  type="button"
+                  className="btn-ghost btn-estimate"
+                  onClick={estimateNutritionForRecipe}
+                  disabled={estimating}
+                >
+                  {estimating ? 'Filling In…' : '✨ Fill In Missing Values'}
+                </button>
+                {estimateError && <p className="form-error" role="alert">{estimateError}</p>}
+              </div>
             )}
           </>
         ) : (
