@@ -32,6 +32,36 @@ const NUTRITION_KEYS: (keyof Nutrition)[] = [
 ]
 
 /**
+ * True when any of the standard per-serving fields is missing — the signal
+ * that an AI pass could still add something (a recipe with only calories
+ * from its source page counts as incomplete, not done).
+ */
+export function nutritionIsIncomplete(n: Nutrition | undefined): boolean {
+  if (!n) return true
+  return NUTRITION_KEYS.some((k) => n[k] === undefined)
+}
+
+/**
+ * Fill only the gaps in a recipe's nutrition with AI estimates — values the
+ * source actually stated are never overwritten. Returns the merged result,
+ * or null when the estimate added nothing new (model unavailable, or every
+ * field was already filled in).
+ */
+export async function completeNutrition(recipe: Recipe): Promise<Nutrition | null> {
+  const estimate = await estimateNutrition(recipe)
+  if (!estimate) return null
+  const merged: Nutrition = { ...recipe.nutrition }
+  let added = false
+  for (const k of NUTRITION_KEYS) {
+    if (merged[k] === undefined && estimate[k] !== undefined) {
+      merged[k] = estimate[k]
+      added = true
+    }
+  }
+  return added ? merged : null
+}
+
+/**
  * Pull the known nutrition fields out of a raw AI response object, keeping
  * only finite non-negative numbers. Returns null if nothing usable (no
  * calories figure) came through.

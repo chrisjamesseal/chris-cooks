@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllRecipes, saveRecipe } from '../db'
-import { aiEndpoint, estimateNutrition } from '../lib/ai'
+import { aiEndpoint, completeNutrition, nutritionIsIncomplete } from '../lib/ai'
 import { fetchNutritionFromSource } from '../lib/import'
 import { getPlan } from '../lib/plan'
 import { videoInfoFromUrl } from '../lib/video'
@@ -173,20 +173,22 @@ export default function Nutrition() {
   const lookupCandidates = recipes.filter(
     (r) => !r.nutrition?.calories && r.source?.url && !videoInfoFromUrl(r.source.url),
   )
-  const missing = recipes.filter((r) => !r.nutrition?.calories)
+  // Anything with a gap counts — a recipe with only calories from its source
+  // page still needs protein/carbs/fat etc. filled in, not just empty ones.
+  const incomplete = recipes.filter((r) => nutritionIsIncomplete(r.nutrition))
 
   async function estimateAll() {
     setEstimating(true)
     let done = 0
     let checked = 0
-    for (const recipe of missing) {
+    for (const recipe of incomplete) {
       if (cancelled.current) return
       checked++
-      setEstimateMsg(`Estimating ${checked} of ${missing.length}…`)
+      setEstimateMsg(`Filling in ${checked} of ${incomplete.length}…`)
       try {
-        const nutrition = await estimateNutrition(recipe)
+        const nutrition = await completeNutrition(recipe)
         if (nutrition) {
-          await saveRecipe({ ...recipe, nutrition, nutritionEstimated: true })
+          await saveRecipe({ ...recipe, nutrition, nutritionEstimated: true, updatedAt: Date.now() })
           done++
         }
       } catch {
@@ -195,7 +197,7 @@ export default function Nutrition() {
     }
     if (!cancelled.current) {
       setEstimating(false)
-      setEstimateMsg(`Done ✓ Estimated Nutrition for ${done} ${done === 1 ? 'Recipe' : 'Recipes'}`)
+      setEstimateMsg(`Done ✓ Filled In Nutrition for ${done} ${done === 1 ? 'Recipe' : 'Recipes'}`)
       setRecipes(await getAllRecipes())
     }
   }
@@ -265,10 +267,6 @@ export default function Nutrition() {
           <h2 className="nutri-plan__title">🗓 Your Meal Plan</h2>
           <div className="nutri-totals">
             <div className="nutri-total">
-              <span className="nutri-total__num">{sum((r) => r.nutrition!.calories)}</span>
-              <span className="nutri-total__label">kcal</span>
-            </div>
-            <div className="nutri-total">
               <span className="nutri-total__num">{sum((r) => r.nutrition!.proteinG)}g</span>
               <span className="nutri-total__label">protein</span>
             </div>
@@ -306,10 +304,14 @@ export default function Nutrition() {
       <section className="card backup-card">
         <h2 className="backup-card__title">Nutrition Coverage</h2>
         <p className="muted backup-card__hint">
-          {withNutrition.length} of {recipes.length} recipes have nutrition info.
+          {recipes.length - incomplete.length} of {recipes.length} recipes have full nutrition info
+          {withNutrition.length > recipes.length - incomplete.length &&
+            ` (${withNutrition.length - (recipes.length - incomplete.length)} more have partial data)`}
+          .
           {lookupCandidates.length > 0 &&
             ` ${lookupCandidates.length} link to a source page that might list it (used as-is, never guessed).`}
-          {aiOn && missing.length > 0 && ` For the rest, an AI estimate can fill the gaps (clearly marked with ≈).`}
+          {aiOn && incomplete.length > 0 &&
+            ` The AI pass fills every gap it can — real values from the source are kept, estimates are marked with ≈.`}
         </p>
         <div className="backup-card__actions">
           {lookupCandidates.length > 0 && (
@@ -317,15 +319,15 @@ export default function Nutrition() {
               {scanning ? 'Checking Source Pages…' : '🔎 Find From Sources'}
             </button>
           )}
-          {aiOn && missing.length > 0 && (
+          {aiOn && incomplete.length > 0 && (
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={estimateAll} disabled={scanning || estimating}>
-              {estimating ? 'Estimating…' : `✨ Estimate ${missing.length} Missing`}
+              {estimating ? 'Filling In…' : `✨ AI Pass: Fill In ${incomplete.length}`}
             </button>
           )}
         </div>
         {scanMsg && <p className="backup-card__msg" role="status">{scanMsg}</p>}
         {estimateMsg && <p className="backup-card__msg" role="status">{estimateMsg}</p>}
-        {!aiOn && (
+        {!aiOn && incomplete.length > 0 && (
           <p className="muted nutri-empty__hint">
             AI estimates need the one-time worker setup. <Link to="/changelog">See how</Link>.
           </p>
